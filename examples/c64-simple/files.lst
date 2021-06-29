@@ -1,0 +1,9 @@
+-system C64
+
+main_c64.k65			main
+
+
+-o c64-simple.prg
+
+-link
+!start c64-simple.prg

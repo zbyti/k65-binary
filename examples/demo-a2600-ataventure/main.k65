@@ -1,0 +1,43 @@
+
+
+
+main {
+
+	{ x=[0] }!=
+
+	{
+		init
+
+		x=&<Txt_Intro	y=&>Txt_Intro	far startext_nostars	//	0	v
+		x=&<Txt_Stars	y=&>Txt_Stars	far startext_emerge		//		20 bars together for text
+
+		far seq_rotozoomer										//	20	8 bars
+		far seq_fbrotozoom2										//	28	16 bars
+		far seq_rototex											//	44	20 bars
+
+
+		//		x=&<Txt_Tunnel	y=&>Txt_Tunnel	far startext			//	0
+		far seq_proctun											//	72	8 bars
+
+		//		x=&<Txt_Track	y=&>Txt_Track	far startext			//	0
+		//{ far fx_tracktext a=demo_event a?4 }< demo_event=a=0			//	0
+
+		//		x=&<Txt_FramBuff y=&>Txt_FramBuff	far startext		//	0
+		far seq_trails											//	104	8 bars
+
+		//		x=&<Txt_Life	y=&>Txt_Life		far startext		//	0
+		far seq_life											//	124	16 bars
+
+		far seq_dotball											//	156	16 bars
+
+		//		x=&<Txt_ThreeD	y=&>Txt_ThreeD		far startext		//	0 bars
+		far seq_camel											//	184	8 bars
+
+		far seq_cube2											//	192	12 bars
+		far seq_cube3											//	216	24 bars
+
+		x=&<Txt_Outro	y=&>Txt_Outro		far startext		//	240	16 bars
+
+	} always
+
+}

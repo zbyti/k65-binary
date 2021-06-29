@@ -1,0 +1,224 @@
+data TunRing0 {
+	align 32
+	9 10 12 14 18 23 32 52 128 128 203 223 232 237 241 243 245 246 
+}
+data TunRing1 {
+	align 32
+	18 21 24 28 34 42 55 75 75 181 181 201 214 222 228 232 235 238 
+}
+data TunRing2 {
+	align 32
+	18 20 22 26 30 35 39 39 20 236 217 217 221 226 230 234 236 238 
+}
+data TunRing3 {
+	align 32
+	17 18 20 22 25 26 26 22 9 247 234 230 230 231 234 236 238 239 
+}
+data TunRing4 {
+	align 32
+	15 16 18 19 20 20 18 13 5 251 243 238 236 236 237 238 240 241 
+}
+data TunRing5 {
+	align 32
+	14 15 15 16 16 15 13 9 3 253 247 243 241 240 240 241 241 242 
+}
+data TunRing6 {
+	align 32
+	12 13 13 13 13 11 9 6 2 254 250 247 245 243 243 243 243 244 
+}
+data TunRing7 {
+	align 32
+	11 11 11 11 10 9 7 4 1 255 252 249 247 246 245 245 245 245 
+}
+data TunRing8 {
+	align 32
+	10 10 9 9 8 7 5 3 1 255 253 251 249 248 247 247 246 246 
+}
+data TunRing9 {
+	align 32
+	9 8 8 8 7 6 4 2 1 255 254 252 250 249 248 248 248 247 
+}
+data TunRing10 {
+	align 32
+	8 7 7 6 6 5 3 2 0 0 254 253 251 250 250 249 249 248 
+}
+data TunRing11 {
+	align 32
+	7 6 6 5 5 4 3 1 0 0 255 253 252 251 251 250 250 249 
+}
+data TunRing12 {
+	align 32
+	6 6 5 5 4 3 2 1 0 0 255 254 253 252 251 251 250 250 
+}
+data TunRing13 {
+	align 32
+	5 5 5 4 3 3 2 1 0 0 255 254 253 253 252 251 251 251 
+}
+data TunRing14 {
+	align 32
+	5 4 4 3 3 2 2 1 0 0 255 254 254 253 253 252 252 251 
+}
+data TunRing15 {
+	align 32
+	4 4 3 3 2 2 1 1 0 0 255 255 254 254 253 253 252 252 
+}
+data TunRay0 {
+	align 32
+	240 15 52 93 141 198 8 87 172 172 87 8 198 141 93 52 15 240 211 
+}
+data TunRay1 {
+	align 32
+	253 252 251 249 245 240 230 211 171 171 211 230 240 245 249 251 252 253 254 
+}
+data TunRay2 {
+	align 32
+	250 248 246 242 237 229 216 198 178 178 198 216 229 237 242 246 248 250 251 
+}
+data TunRay3 {
+	align 32
+	247 245 242 237 231 223 212 200 190 190 200 212 223 231 237 242 245 247 249 
+}
+data TunRay4 {
+	align 32
+	245 242 239 235 229 222 214 206 200 200 206 214 222 229 235 239 242 245 247 
+}
+data TunRay5 {
+	align 32
+	244 241 238 233 228 223 217 212 208 208 212 217 223 228 233 238 241 244 246 
+}
+data TunRay6 {
+	align 32
+	243 240 237 233 229 225 221 217 215 215 217 221 225 229 233 237 240 243 245 
+}
+data TunRay7 {
+	align 32
+	242 240 237 234 231 227 224 222 220 220 222 224 227 231 234 237 240 242 244 
+}
+data TunRay8 {
+	align 32
+	242 240 238 235 232 230 227 226 225 225 226 227 230 232 235 238 240 242 244 
+}
+data TunRay9 {
+	align 32
+	242 240 238 236 234 232 230 229 228 228 229 230 232 234 236 238 240 242 244 
+}
+data TunRay10 {
+	align 32
+	243 241 239 237 236 234 233 232 231 231 232 233 234 236 237 239 241 243 244 
+}
+data TunRay11 {
+	align 32
+	243 242 240 239 237 236 235 234 234 234 234 235 236 237 239 240 242 243 244 
+}
+data TunRay12 {
+	align 32
+	244 242 241 240 239 238 237 236 236 236 236 237 238 239 240 241 242 244 245 
+}
+data TunRay13 {
+	align 32
+	244 243 242 241 240 239 239 238 238 238 238 239 239 240 241 242 243 244 245 
+}
+data TunRay14 {
+	align 32
+	245 244 243 242 241 241 240 240 240 240 240 240 241 241 242 243 244 245 246 
+}
+data TunRay15 {
+	align 32
+	245 245 244 243 242 242 241 241 241 241 241 241 242 242 243 244 245 245 246 
+}
+func tunoff {
+	a=px1
+	a+TunRing0,y a?0x80 tmp3>>>
+	a+TunRing1,y a?0x80 tmp3>>>
+	a+TunRing2,y a?0x80 tmp3>>>
+	a+TunRing3,y a?0x80 tmp3>>>
+	a+TunRing4,y a?0x80 tmp3>>>
+	a+TunRing5,y a?0x80 tmp3>>>
+	a+TunRing6,y a?0x80 tmp3>>>
+	a+TunRing7,y a?0x80 tmp3>>>
+	a+TunRing8,y a?0x80 tmp4>>>
+	a+TunRing9,y a?0x80 tmp4>>>
+	a+TunRing10,y a?0x80 tmp4>>>
+	a+TunRing11,y a?0x80 tmp4>>>
+	a+TunRing12,y a?0x80 tmp4>>>
+	a+TunRing13,y a?0x80 tmp4>>>
+	a+TunRing14,y a?0x80 tmp4>>>
+	a+TunRing15,y a?0x80 tmp4>>>
+	a=py1
+	a+TunRay0,y a?0x80 tmp5>>>
+	a+TunRay1,y a?0x80 tmp5>>>
+	a+TunRay2,y a?0x80 tmp5>>>
+	a+TunRay3,y a?0x80 tmp5>>>
+	a+TunRay4,y a?0x80 tmp5>>>
+	a+TunRay5,y a?0x80 tmp5>>>
+	a+TunRay6,y a?0x80 tmp5>>>
+	a+TunRay7,y a?0x80 tmp5>>>
+	a+TunRay8,y a?0x80 tmp6>>>
+	a+TunRay9,y a?0x80 tmp6>>>
+	a+TunRay10,y a?0x80 tmp6>>>
+	a+TunRay11,y a?0x80 tmp6>>>
+	a+TunRay12,y a?0x80 tmp6>>>
+	a+TunRay13,y a?0x80 tmp6>>>
+	a+TunRay14,y a?0x80 tmp6>>>
+	a+TunRay15,y a?0x80 tmp6>>>
+	a=tmp3 a^tmp5 frambuff+32,x=a
+	a=tmp4 a^tmp6 frambuff,x=a
+}
+func scanliner3 {
+    pf1=y=frambuff,x                  // [s0  6]  +7 = s0 13  -k0-
+    x++                               // [s0 13]  +2 = s0 15  
+    gp0=y=frambuff+32,x               // [s0 15]  +7 = s0 22  
+    a=px1                             // [s0 22]  +3 = s0 25  start X computation
+    a+TunRing0,x a?0x80 tmp3<<<       // [s0 25] +11 = s0 36  do X
+    pf1=y=tmp7                        // [s0 36]  +7 = s0 43  -k1-
+    a+TunRing1,x a?0x80 tmp3<<<       // [s0 43] +11 = s0 54  do X
+    a+TunRing2,x a?0x80 tmp3<<<       // [s0 54] +11 = s0 65  do X
+    a+TunRing3,x a?0x80 tmp3<<<       // [s0 65] +11 = s1  0  do X
+    pf1=y=frambuff,x                  // [s1  0]  +7 = s1  7  -k0-
+    a+TunRing4,x a?0x80 tmp3<<<       // [s1  7] +11 = s1 18  do X
+    a+TunRing5,x a?0x80 tmp3<<<       // [s1 18] +11 = s1 29  do X
+    a+TunRing6,x a?0x80 tmp3<<<       // [s1 29] +11 = s1 40  do X
+    pf1=y=tmp7                        // [s1 40]  +7 = s1 47  -k1-
+    a+TunRing7,x a?0x80 tmp3<<<       // [s1 47] +11 = s1 58  do X
+    a+TunRing8,x a?0x80 tmp4>>>       // [s1 58] +11 = s1 69  do X
+    a+TunRing9,x a?0x80 tmp4>>>       // [s1 69] +11 = s2  4  do X
+    pf1=y=frambuff,x                  // [s2  4]  +7 = s2 11  -k0-
+    a+TunRing10,x a?0x80 tmp4>>>      // [s2 11] +11 = s2 22  do X
+    a+TunRing11,x a?0x80 tmp4>>>      // [s2 22] +11 = s2 33  do X
+    a+TunRing12,x a?0x80 tmp4>>>      // [s2 33] +11 = s2 44  do X
+    pf1=y=tmp7                        // [s2 44]  +7 = s2 51  -k1-
+    a+TunRing13,x a?0x80 tmp4>>>      // [s2 51] +11 = s2 62  do X
+    a+TunRing14,x a?0x80 tmp4>>>      // [s2 62] +11 = s2 73  do X
+    a+TunRing15,x a?0x80 tmp4>>>      // [s2 73] +11 = s3  8  do X
+    pf1=y=frambuff,x                  // [s3  8]  +7 = s3 15  -k0-
+    a=py1                             // [s3 15]  +3 = s3 18  start Y computation
+    a+TunRay0,x a?0x80 tmp5<<<        // [s3 18] +11 = s3 29  do Y
+    a+TunRay1,x a?0x80 tmp5<<<        // [s3 29] +11 = s3 40  do Y
+    pf1=y=tmp7                        // [s3 40]  +7 = s3 47  -k1-
+    a+TunRay2,x a?0x80 tmp5<<<        // [s3 47] +11 = s3 58  do Y
+    a+TunRay3,x a?0x80 tmp5<<<        // [s3 58] +11 = s3 69  do Y
+    a+TunRay4,x a?0x80 tmp5<<<        // [s3 69] +11 = s4  4  do Y
+    pf1=y=frambuff,x                  // [s4  4]  +7 = s4 11  -k0-
+    a+TunRay5,x a?0x80 tmp5<<<        // [s4 11] +11 = s4 22  do Y
+    a+TunRay6,x a?0x80 tmp5<<<        // [s4 22] +11 = s4 33  do Y
+    a+TunRay7,x a?0x80 tmp5<<<        // [s4 33] +11 = s4 44  do Y
+    pf1=y=tmp7                        // [s4 44]  +7 = s4 51  -k1-
+    a+TunRay8,x a?0x80 tmp6>>>        // [s4 51] +11 = s4 62  do Y
+    a+TunRay9,x a?0x80 tmp6>>>        // [s4 62] +11 = s4 73  do Y
+    a+TunRay10,x a?0x80 tmp6>>>       // [s4 73] +11 = s5  8  do Y
+    pf1=y=frambuff,x                  // [s5  8]  +7 = s5 15  -k0-
+    a+TunRay11,x a?0x80 tmp6>>>       // [s5 15] +11 = s5 26  do Y
+    a+TunRay12,x a?0x80 tmp6>>>       // [s5 26] +11 = s5 37  do Y
+    pf1=y=tmp7                        // [s5 37]  +7 = s5 44  -k1-
+    a+TunRay13,x a?0x80 tmp6>>>       // [s5 44] +11 = s5 55  do Y
+    a+TunRay14,x a?0x80 tmp6>>>       // [s5 55] +11 = s5 66  do Y
+    a+TunRay15,x a?0x80 tmp6>>>       // [s5 66] +11 = s6  1  do Y
+    pf1=y=frambuff,x                  // [s6  1]  +7 = s6  8  -k0-
+    a=tmp3 a^tmp5 gp1=a               // [s6  8]  +9 = s6 17  finalize 1
+    a=tmp4 a^tmp6 tmp7=a              // [s6 17]  +9 = s6 26  finalize 2
+    a=dfx1 c-                         // [s6 26]  +5 = s6 31  
+    a+TunCol,x cbg=a *2               // [s6 31]  +9 = s6 40  
+    pf1=y=tmp7                        // [s6 40]  +7 = s6 47  -k1-
+    x?17                              // [s6 47]  +2 = s6 49  
+                                      // [s6 49]  +0 = s6 49  
+}

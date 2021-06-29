@@ -1,0 +1,529 @@
+
+
+/*
+
+// song header
+	+0		song length (in patterns)
+	+1		tempo step
+	+2		tempo compare
+	+3		sequence 0 index buffer	low		- sequence is list of pattern_id*3, nibbles swapped
+	+4		sequence 1 index buffer	low
+	+5		sequence 2 index buffer	low
+	+6		sequence 3 index buffer	low
+	+7		sequence 0 index buffer	high
+	+8		sequence 1 index buffer	high
+	+9		sequence 2 index buffer	high
+	+10		sequence 3 index buffer	high
+	+11		pattern buffer page #
+	+12		instrument data page #
+	+13		envelope data page #
+
+// pattern buffer format (must be page-aligned)
+	---FFFFF	frequency			(x16)	-> tmp1
+	IIIIII-R	instrument/trigger	(x16)	-> tmp2
+	WWWWVVVV	wave/volume			(x16)	-> tmp3
+	...next pattern follows...
+
+
+// instrument data
+	+0		mode bits
+				$10 - use volume envelope
+				$20 - envelope mode:	0-set	1-multiply
+				$40 - // frequency should already be set to 0 in pattern for this mode
+				$80 - add frequency envelope
+				$0x - env step
+					$08	- divider :1	0>0
+					$04 - divider :2	0>4>0
+					$03 - divider :3	0>3>6>1		( if((counter&7)==1) counter&=0xF8; )
+					$02 - divider :4	0>2>4>6>0
+
+	+1		env counter max
+	+2		env counter loop	( if(++counter==max) counter=loop; )
+	+3		env start offset	( aligned to 4, rolled over
+	...next instrument follows...
+
+
+// envelope
+
+*/
+
+
+//data SongHeader { 0 }
+
+data MulTab {
+	align 256
+	for x=0..255 eval [(x&15) * floor(x/16)]
+}
+
+
+
+// tmp5:	r-------
+//			r = 0-continue note			1-retrigger enabled
+
+
+inline p_read_pattern {
+	// in:		ptrA - pointer to sequence data
+	// out:		tmp1, tmp2, tmp3 - data from pattern
+	// saves:	X - must save
+
+	// get pattern number to Acc & tmp1
+	y=songpos_seq a=(ptrA),y tmp1=a
+
+	// ptrA = pointer to pattern data
+	a&0xF0			c- a+songpos_step	ptrA=a		// ptrA   = (pat_id & 0xF0) + songpos_step
+	a=tmp1 a&0x0F	   a+SongHeader+11	ptrA+1=a	// ptrA+1 = (pat_id & 0x0F) + pattern_page
+
+	// read data
+	y=0	 a=(ptrA),y						tmp1=a	// ---FFFFF
+	y=16 a=synflags a|0xFE	a&(ptrA),y	tmp2=a	// IIIIII-R		- bit R masked by bit 0 of synflags
+	y=32 a=(ptrA),y						tmp3=a	// WWWWVVVV
+}
+
+inline p_muted_instrument_old {
+	// input:
+	//	tmp1	// ---FFFFF		frequency
+	//	tmp2	// IIIIII-R		retrigger, instrument #
+	//	tmp3	// WWWWVVVV		wave, volume
+	//	X		// channel number
+
+	// retrigger channel
+	a=tmp2 a&1 !={ chanpos0,x=a=0 }
+
+	// move to next tick
+	a=tmp4 a&0x0F c- a+chanpos0,x tmp4=a	// tmp4 = (flags & 0x0F) + chanpos
+	a&0x07 a?1 == { tmp4-- }				// 1 -> 0
+	a=tmp4
+	y=1 a?(ptrA),y =={ y=2 a=(ptrA),y }
+	chanpos0,x=a
+}
+
+inline p_muted_instrument {
+	// input:
+	//	tmp1	// ---FFFFF		frequency
+	//	tmp2	// IIIIII-R		retrigger, instrument #
+	//	tmp3	// WWWWVVVV		wave, volume
+	//	X		// channel number
+	//
+	// output:
+	//	none
+
+
+	// retrigger channel
+	a=tmp2 a&1 !={ chanpos0,x=a=0 }
+
+
+	// ptrA = instrument definition address
+	a=tmp2 a&0xFC ptrA=a
+	ptrA+1=a=SongHeader+12
+
+
+	// get instrument flags to tmp4
+	y=0 tmp4=a=(ptrA),y
+
+
+
+	// move to next tick
+	a=tmp4 a&0x0F c- a+chanpos0,x tmp4=a	// tmp4 = (flags & 0x0F) + chanpos
+	a&0x07 a?1 == { tmp4-- }				// 1 -> 0
+	a=tmp4
+	y=1 a?(ptrA),y =={ y=2 a=(ptrA),y }
+	chanpos0,x=a
+}
+
+inline p_instrument {
+	// input:
+	//	tmp1	// ---FFFFF		frequency
+	//	tmp2	// IIIIII-R		retrigger, instrument #
+	//	tmp3	// WWWWVVVV		wave, volume
+	//	X		// channel number
+	//
+	// output:
+	//	tia0f	- frequency data
+	//	tia0vw	- volume
+
+
+	// retrigger channel
+	a=tmp2 a&1 !={ chanpos0,x=a=0 }
+
+
+	// ptrA = instrument definition address
+	a=tmp2 a&0xFC ptrA=a
+	ptrA+1=a=SongHeader+12
+
+
+	// wave is easy
+	a=tmp3 a>> a>> a>> a>> tia0w=a
+
+
+
+	// tmp5 = offset in envelope (x2)
+	a=chanpos0,x a>> a>> a&0xFE tmp5=a
+
+
+	// ptrB = address in envelope
+	y=3 a=(ptrA),y tmp4=a						// tmp4		= env address from instrument data
+	a&0xFC c- a+tmp5 ptrB=a						// ptrB		= (tmp4 & 0xFC) + env_pos
+	a=tmp4 a&0x3 a+SongHeader+13 ptrB+1=a		// ptrB+1	= (tmp4 & 0x03) + EnvBase + carry
+
+
+	// get instrument flags to tmp4
+	y=0 tmp4=a=(ptrA),y
+
+
+	// compute volume - env value is in (ptrB),0
+	a=tmp3 a&0x0F tmp3=a
+	!= {
+		a=0x10 a&?tmp4
+		!= {
+			a=0x20 a&?tmp4
+			!= {
+				// env mode: multiply
+				a=tmp3 a<< a<< a<< a<< y=0 a|(ptrB),y
+				y=a a=MulTab,y a>> a>> a>> a>> tmp3=a
+			} else {
+				// env mode: set
+				y=0 tmp3=a=(ptrB),y
+			}
+		}
+	}
+	// copy result
+	tia0v=a=tmp3
+
+
+	// compute frequency - env value is in (ptrB),1
+	a=0x80 a&?tmp4 != {
+		y=1 a=tmp1 c- a+(ptrB),y	// add envelope
+		a?31 >=0{ a=31 }				// clamp to 31
+		tia0f=a						// save
+	} else {
+		tia0f=a=tmp1
+	}
+
+
+	// move to next tick
+	a=tmp4 a&0x0F c- a+chanpos0,x tmp4=a	// tmp4 = (flags & 0x0F) + chanpos
+	a&0x07 a?1 == { tmp4-- }				// 1 -> 0
+	a=tmp4
+	y=1 a?(ptrA),y =={ y=2 a=(ptrA),y }
+	chanpos0,x=a
+}
+
+
+
+
+func song_reset {
+	// setup song so first step is triggered immediately
+	a=SongHeader+2 c- a-SongHeader+1 songpos_sub=a
+	songpos_step=a=0x1F
+	songpos_seq=a=0xFF
+	chanpos0=a=0
+	chanpos1=a
+	chanpos2=a
+	chanpos3=a
+}
+
+
+inline p_next_tick {
+	// move synth state to next tick, compute flags
+	synflags=a=0
+	a=songpos_sub c- a+SongHeader+1 songpos_sub=a		// sub += song:step
+	a?SongHeader+2 >={									// if sub >= song:maxstep
+		c+ a-SongHeader+2 songpos_sub=a					//		sub -= song:maxstep
+		synflags=a=1									//		synflags = 1
+		a=songpos_step c- a+1 a&0x0F songpos_step=a		//		step = (step+1)&0xF
+		=={												//		if step==0:
+			songpos_seq++								//			seq++
+			a=songpos_seq a?SongHeader+0				//			if seq >= song:len
+			>={ songpos_seq=a=0 }						//				seq=0
+		}
+	}
+}
+
+inline p_next_tick_fixed {
+	// move synth state to next tick, compute flags
+	//	A - ticks per step
+	synflags=x=0
+	songpos_sub++ a?songpos_sub
+	=={
+		songpos_sub=a=0
+		synflags=a=1									//		synflags = 1
+		a=songpos_step c- a+1 a&0x0F songpos_step=a		//		step = (step+1)&0xF
+		=={												//		if step==0:
+			songpos_seq++								//			seq++
+//			a=songpos_seq a?SongHeader+0				//			if seq >= song:len
+//			>={ songpos_seq=a=0 }						//				seq=0
+
+			a=songpos_seq a?92							//			if seq >= song:len
+			>={ songpos_seq=a=12 }						//				seq=0
+			demo_event++
+		}
+	}
+}
+
+func p_run_channel {
+	// input:	X - channel number
+	ptrA=a=SongHeader+3,x
+	ptrA+1=a=SongHeader+7,x
+	p_read_pattern
+	p_instrument
+}
+
+func p_muted_channel {
+	// input:	X - channel number
+	ptrA=a=SongHeader+3,x
+	ptrA+1=a=SongHeader+7,x
+	p_read_pattern
+	p_muted_instrument
+}
+
+
+func song_player {
+	
+	//p_next_tick
+	// a=6 p_next_tick_fixed
+	a=songpos_step a&3
+	=={ a=6 } else { a=5 }
+	p_next_tick_fixed
+
+	x=2 p_run_channel
+	x=3 a=tia0v == { p_run_channel } else { p_muted_channel }
+	
+	tia1v=a=tia0v
+	tia1w=a=tia0w
+	tia1f=a=tia0f
+
+	x=0 p_run_channel
+	x=1 a=tia0v == { p_run_channel } else { p_muted_channel }
+
+	// push to TIA
+	af0=a=tia0f av0=a=tia0v ac0=a=tia0w
+	af1=a=tia1f av1=a=tia1v ac1=a=tia1w
+}
+
+
+
+inline p_read_pattern_1 {
+	// in:		ptrA - pointer to sequence data
+	// out:		tmp1, tmp2, tmp3 - data from pattern
+	// saves:	X - must save
+
+	// get pattern number to Acc & tmp1
+	y=songpos_seq a=(ptrA),y tmp1=a
+
+	// ptrA = pointer to pattern data
+	a&0xF0			c- a+songpos_step	ptrA=a		// ptrA   = (pat_id & 0xF0) + songpos_step
+	a=tmp1 a&0x0F	   a+SongHeader+11	ptrA+1=a	// ptrA+1 = (pat_id & 0x0F) + pattern_page
+
+	// read data
+	y=0	 a=(ptrA),y						tmp1=a	// ---FFFFF
+	y=16 a=synflags a|0xFE	a&(ptrA),y	tmp2=a	// IIIIII-R		- bit R masked by bit 0 of synflags
+	y=32 a=(ptrA),y						tmp3=a	// WWWWVVVV
+}
+
+func p_fill_track_text_init {
+
+	tmp2=a=6
+	x=3
+	{
+		// X - channel number
+		ptrA=a=SongHeader+3,x
+		ptrA+1=a=SongHeader+7,x
+
+		// get pattern number to Acc & tmp1
+		y=songpos_seq a=(ptrA),y tmp1=a
+
+		// ptrA = pointer to pattern data
+		y=tmp2
+		a&0xF0								pattA1,y=a			// ptr   = (pat_id & 0xF0)
+		a=tmp1 a&0x0F	c-  a+SongHeader+11	pattA1+1,y=a		// ptr+1 = (pat_id & 0x0F) + pattern_page
+
+		a=pattA1,y c- a+16 pattA2,y=a		a=pattA1+1,y a+0 pattA2+1,y=a
+		a=pattA2,y c- a+16 pattA3,y=a		a=pattA2+1,y a+0 pattA3+1,y=a
+
+		tmp2--
+		tmp2--
+		x--
+	}>=0
+
+	a=songpos_step c+ a-3
+	patpos1=a
+}
+
+
+func p_fill_track_text_old {
+
+	// read data
+	//	patt#1			---FFFFF
+	//	patt#2			IIIIII-R
+	//	patt#3			WWWWVVVV
+
+	tmp1=a=1
+	y=patpos1
+	a=y a&0xF0
+	!={
+		a=8
+		txtp+0 =a
+		txtp+6 =a
+		txtp+12=a
+		txtp+18=a
+		txtp+2 =a
+		txtp+8 =a
+		txtp+14=a
+		txtp+20=a
+		txtp+4 =a
+		txtp+10=a
+		txtp+16=a
+		txtp+22=a
+		x=6 { *18 x-- }>=0
+		*3
+		goto pftt_end_old
+	}
+
+	nocross {
+		a=(pattA2),y a&?tmp1
+		!={
+			a<< a&0xF8	txtp+2 =a							// 8
+			a=(pattA1),y	a<< a<<	a&0x7E txtp+0 =a			// 12
+			a=(pattA3),y	a<< a<< a<< a<<	txtp+4 =a		// 16
+		} else {
+			a=0	txtp+2 =a	txtp+0 =a	txtp+4 =a
+			*30
+		}
+
+		a=(pattB2),y a&?tmp1
+		!={
+			a<< a&0xF8	txtp+8 =a							// 8
+			a=(pattB1),y	a<< a<<	a<< txtp+6 =a				// 12
+			a=(pattB3),y	a<< a<< a<< a<<	txtp+10 =a		// 16
+		} else {
+			a=0	txtp+8 =a	txtp+6 =a	txtp+10 =a
+			*30
+		}
+
+		a=(pattC2),y a&?tmp1
+		!={
+			a<< a&0xF8	txtp+14 =a							// 8
+			a=(pattC1),y	a<< a<<	a&0x7E txtp+12 =a				// 12
+			a=(pattC3),y	a<< a<< a<< a<<	txtp+16 =a		// 16
+		} else {
+			a=0	txtp+14 =a	txtp+12 =a	txtp+16 =a
+			*30
+		}
+
+		a=(pattD2),y a&?tmp1
+		!={
+			a<< a&0xF8	txtp+20 =a							// 8
+			a=(pattD1),y	a<< a<<	a&0x7E txtp+18 =a				// 12
+			a=(pattD3),y	a<< a<< a<< a<<	txtp+22 =a		// 16
+		} else {
+			a=0	txtp+20 =a	txtp+18 =a	txtp+22 =a
+			*30
+		}
+	}
+
+	pftt_end_old:
+	patpos1++
+	patpos2++
+	patpos3++
+}
+
+data InstSlot {
+	align 16
+	20 16 12 0 8 4 0 0 0 0 0 0 0 0 0 0
+
+
+	0 4 8 12 16 20
+	0 4 8 12 16 20
+	0 4 8 12 16 20
+}
+
+data FreqChar {
+	align 16
+	0x00 0x08 0x10 0x18
+	0x20 0x28 0x30 0x38
+	0x40 0x48 0x50 0x58
+	0x60 0x68 0x70 0x78
+}
+
+func p_fill_track_text {
+
+	// read data
+	//	patt#1			---FFFFF
+	//	patt#2			IIIIII-R
+	//	patt#3			WWWWVVVV
+
+	tmp1=a=1
+	y=patpos1
+	a=y a&0xF0
+	!=   { a=0x88 }
+	else { a=0x80 }
+	txtp+0 =a
+	txtp+6 =a
+	txtp+12=a
+	txtp+18=a
+	txtp+2 =a
+	txtp+8 =a
+	txtp+14=a
+	txtp+20=a
+	txtp+4 =a
+	txtp+10=a
+	txtp+16=a
+	txtp+22=a
+	a?0x88 == {
+		*10
+		x=23
+		nocross { *5 x-- }!=
+		goto pftt_end
+	}
+
+	nocross {
+		a=(pattA2),y a&?tmp1
+		!={
+			a>> a>> a&0xF x=a a=InstSlot,x x=a		// 14
+			a=(pattA1),y							// 5
+			a^(pattA3),y							// 5
+			tmp2=a									// 3
+			a&0x0F a<< a<< a<< txtp,x=a				// 12
+			a=tmp2									// 3
+			a>> a&0x78 txtp+2,x=a					// 8
+		} else { *32 *18 }
+
+		a=(pattB2),y a&?tmp1
+		!={
+			a>> a>> a&0xF x=a a=InstSlot,x x=a
+			a=(pattB1),y 
+			a^(pattB3),y
+			tmp2=a
+			a&0x0F a<< a<< a<< txtp,x=a
+			a=tmp2
+			a>> a&0x78 txtp+2,x=a
+		} else { *32 *18 }
+
+		a=(pattC2),y a&?tmp1
+		!={
+			a>> a>> a&0xF x=a a=InstSlot,x x=a
+			a=(pattC1),y 
+			a^(pattC3),y
+			tmp2=a
+			a&0x0F a<< a<< a<< txtp,x=a
+			a=tmp2
+			a>> a&0x78 txtp+2,x=a
+		} else { *32 *18 }
+
+		a=(pattD2),y a&?tmp1
+		!={
+			a>> a>> a&0xF x=a a=InstSlot,x x=a
+			a=(pattD1),y 
+			a^(pattD3),y
+			tmp2=a
+			a&0x0F a<< a<< a<< txtp,x=a
+			a=tmp2
+			a>> a&0x78 txtp+2,x=a
+		} else { *32 *18 }
+	}
+
+	pftt_end:
+	patpos1++
+	patpos2++
+	patpos3++
+}

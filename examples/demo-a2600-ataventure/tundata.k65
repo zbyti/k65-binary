@@ -1,0 +1,6 @@
+
+
+data TunCol {
+	align 32
+	for x = 0 .. 17 eval [round(cos(x/17*2*pi+pi)*1.9+3.9 + .49*sin((x%32)*cos((x%32)*100)) )*2 + 2]
+}

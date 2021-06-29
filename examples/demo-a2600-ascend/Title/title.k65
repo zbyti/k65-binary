@@ -1,0 +1,679 @@
+/*
+ * Optimize:
+ * - size: First byte per line in title_display_logo_clammed_left is always zero
+ * - size: make 0 padding for small arrows overlapping
+ * - RAM: let ZP routine and title_col_x overlap; copy ZP routine bytes when fade is complete; use
+ *        differnt bar routines that use constants then
+ * - RAM: Use tmp, tmp2 instead of 2 title_col_xxx
+ * - size: convert sl12 to title_sl12
+ */
+
+// States
+[
+	STATE_TITLE_IN = 0,
+	STATE_TITLE_LOGO = 1,
+	STATE_TITLE_48 = 2,
+	STATE_TITLE_96 = 3,
+	STATE_TITLE_140 = 4,
+	STATE_TITLE_PAUSE = 5,
+	STATE_TITLE_OUT = 6,
+	STATE_TITLE_END = 7
+]
+
+// #lines of ascend logo for the different display modes
+[
+	TITLE_CLAM_RIGHT_HEIGHT = 18,
+	TITLE_LOOP_HEIGHT = 18,
+	TITLE_CLAM_LEFT_HEIGHT = 18
+]
+// Zeropage addresses for display loop
+[
+	TITLE_ZP_LINE = 7,
+	TITLE_ZP_TMP = 45,
+	TITLE_ZP_SL12 = 54,
+	TITLE_ZP_ENTRY = 18
+]
+// Colors of gradient bar enclosing the logo
+[
+	TITLE_BARSLOPE_HEIGHT = 25,
+	TITLE_COL_BACK = 3*16,
+	TITLE_COL_1 = 3*16+2,
+	TITLE_COL_2 = 3*16+4,
+	TITLE_COL_INNER = 3*16+6,
+	TITLE_COL_ASCEND = 0*16+14
+]
+
+var title_col_back=0x84 ?, title_col_1 ?, title_col_2 ?, title_col_inner ?;
+var title_display_sloped_ZP[18] ?, title_display_sloped_ZP_entry ?;
+
+var title_emit_c9c9=0xc9c9;
+var title_emit_2460=0x6024;		// little endian!
+
+
+
+/* Empty RTS function
+ */
+func title_sl12 {
+}
+
+
+/* Fine-position object.
+ * Pos in a, index in x. No hmove done.
+ */
+func title_pos_object {
+	wsync title_sl12 c+ nocross{a-15}>= RESP0+256,x=a
+	a^7 a<< a<< a<< a<< HMP0,x=a
+}
+
+
+/* Display upper gradient border enclosing the logo
+ */
+func title_display_bar_upper {
+	sl5
+	tmp=a=[TITLE_BARSLOPE_HEIGHT]
+	x=title_col_1
+	nocross {
+		// First line
+		COLUBK=a=title_col_back
+		sl6
+		a=title_col_2
+		y=title_col_inner
+		COLUBK=x
+		*2 COLUBK=a
+		*2 COLUBK=y
+		title_sl12 title_sl12 title_sl12 sl9
+		// Second line
+		COLUBK=a=title_col_back
+		sl6
+		a=title_col_2
+		y=title_col_inner
+		COLUBK=x
+		*2 COLUBK=a
+		*2 COLUBK=y
+		title_sl12 title_sl12 title_sl12
+		tmp--
+	}!=
+}
+
+
+/* Display lower gradient border enclosing the logo
+ */
+func title_display_bar_lower {
+	title_sl12 title_sl12 title_sl12 title_sl12 sl6
+	tmp=a=[TITLE_BARSLOPE_HEIGHT]
+	x=title_col_2
+	nocross {
+		// First line
+		a=title_col_1
+		y=title_col_back
+		COLUBK=x
+		*2 COLUBK=a
+		*2 COLUBK=y
+		sl6
+		COLUBK=a=title_col_inner
+		title_sl12 title_sl12 title_sl12 sl9
+		// Second line
+		a=title_col_1
+		y=title_col_back
+		COLUBK=x
+		*2 COLUBK=a
+		*2 COLUBK=y
+		sl6
+		COLUBK=a=title_col_inner
+		title_sl12 title_sl12 title_sl12
+		tmp--
+	}!=
+	COLUBK=a=0
+}
+
+
+/* Routine to display sloped logo in a loop, to copy into zeropage
+ */
+func title_display_sloped_ROM {
+
+Title_ZP_Start:
+
+Title_ZP_Loop:
+	WSYNC=a												// 3	
+	// First line
+	HMOVE=a												// 3
+	y=title_display_sloped_ZP+[TITLE_ZP_LINE]			// 3
+
+	// nop slide: line = 0...7 -> 13...6 cycles, line = 8 -> rts
+Title_ZP_line:
+	!= goto Title_ZP_Loop								// 2/3
+	a&?title_emit_c9c9
+	a?0xc9
+	a?0xc9
+	a&?title_emit_2460									// 6...13
+
+	GRP0=a=ascend_logo_looped_1+[0*TITLE_LOOP_HEIGHT/2],y	// 7
+	GRP1=a=ascend_logo_looped_1+[1*TITLE_LOOP_HEIGHT/2],y	// 7
+	GRP0=a=ascend_logo_looped_1+[2*TITLE_LOOP_HEIGHT/2],y	// 7
+	title_display_sloped_ZP+[TITLE_ZP_TMP]=a=ascend_logo_looped_1+[5*TITLE_LOOP_HEIGHT/2],y
+														// 7
+	a=x=ascend_logo_looped_1+[4*TITLE_LOOP_HEIGHT/2],y	// 7
+	a=ascend_logo_looped_1+[3*TITLE_LOOP_HEIGHT/2],y	// 7
+Title_ZP_tmp:
+	y=42												// 2
+	
+	GRP1=a GRP0=x GRP1=y GRP0=a							// 12
+	
+	// Second line
+	title_sl12									// 12
+	sl5													// 5
+	title_display_sloped_ZP+[TITLE_ZP_LINE]++			// 5
+	y=title_display_sloped_ZP+[TITLE_ZP_LINE]			// 3
+
+	GRP0=a=ascend_logo_looped_2+[0*TITLE_LOOP_HEIGHT/2-1],y			// 7
+	GRP1=a=ascend_logo_looped_2+[1*TITLE_LOOP_HEIGHT/2-1],y			// 7
+	GRP0=a=ascend_logo_looped_2+[2*TITLE_LOOP_HEIGHT/2-1],y			// 7
+	title_display_sloped_ZP+[TITLE_ZP_TMP]=a=ascend_logo_looped_2+[5*TITLE_LOOP_HEIGHT/2-1],y
+														// 7
+	a=x=ascend_logo_looped_2+[4*TITLE_LOOP_HEIGHT/2-1],y	// 7
+	a=ascend_logo_looped_2+[3*TITLE_LOOP_HEIGHT/2-1],y	// 7
+	y=title_display_sloped_ZP+[TITLE_ZP_TMP]			// 3
+	GRP1=a GRP0=x GRP1=y GRP0=a							// 12
+	goto Title_ZP_Loop									// 3
+	
+Title_ZP_End:
+}
+
+
+/* Display clammed right part of logo
+ */
+inline title_display_logo_clammed_right {
+	// Clammed gfx
+	wsync *2
+	y=0 nocross {
+		title_sl12												// 12
+		tmp2=y															//  3
+		GRP0=a=ascend_logo_clam_right+[0*TITLE_CLAM_RIGHT_HEIGHT],y
+		GRP1=a=ascend_logo_clam_right+[1*TITLE_CLAM_RIGHT_HEIGHT],y
+		GRP0=a=ascend_logo_clam_right+[2*TITLE_CLAM_RIGHT_HEIGHT],y		// 21
+		tmp=a=ascend_logo_clam_right+[5*TITLE_CLAM_RIGHT_HEIGHT],y
+		a=x=ascend_logo_clam_right+[4*TITLE_CLAM_RIGHT_HEIGHT],y
+		a=ascend_logo_clam_right+[3*TITLE_CLAM_RIGHT_HEIGHT],y
+		y=tmp															// 18
+		GRP1=a GRP0=x GRP1=y GRP0=a										// 12
+		y=tmp2 y++ y?[TITLE_CLAM_RIGHT_HEIGHT]							// 10
+	}!=
+}
+
+
+/* Display clammed left part of logo
+ */
+inline title_display_logo_clammed_left {
+	// Clammed gfx
+	// Do one last hmove, then sta GRP1 @27
+	// @40
+	tmp2=y=0															//  5
+	// @45
+	GRP0=a=ascend_logo_clam_left+[0*TITLE_CLAM_LEFT_HEIGHT]
+	GRP1=a=ascend_logo_clam_left+[1*TITLE_CLAM_LEFT_HEIGHT]
+	GRP0=a=ascend_logo_clam_left+[2*TITLE_CLAM_LEFT_HEIGHT]				// 21
+	// @66
+	wsync hmove
+	// @3
+	*3 goto title_clam_left_entry
+
+	nocross {
+		tmp2=y															//  3
+		GRP0=a=ascend_logo_clam_left+[0*TITLE_CLAM_LEFT_HEIGHT],y
+		GRP1=a=ascend_logo_clam_left+[1*TITLE_CLAM_LEFT_HEIGHT],y
+		GRP0=a=ascend_logo_clam_left+[2*TITLE_CLAM_LEFT_HEIGHT],y		// 21
+title_clam_left_entry:	// @9
+		tmp=a=ascend_logo_clam_left+[5*TITLE_CLAM_LEFT_HEIGHT],y
+		a=x=ascend_logo_clam_left+[4*TITLE_CLAM_LEFT_HEIGHT],y
+		a=ascend_logo_clam_left+[3*TITLE_CLAM_LEFT_HEIGHT],y
+		y=tmp															// 18
+		GRP1=a GRP0=x GRP1=y GRP0=a										// 12
+		title_sl12
+		y=tmp2 y++ y?[TITLE_CLAM_LEFT_HEIGHT]							// 10
+	}!=
+}
+
+
+/* Display unrolled part of logo
+ */
+inline title_display_logo_unrolled {
+	//Lines 36, 37, first sta GRP1 @49
+	// wsync hmove already done by ZP subroutine
+	GRP0=a=0x3f GRP1=a=0xf8 GRP0=a=0x1f a=0xbf x=0xf8 y=0x98	//21
+	title_sl12 GRP1+256=a GRP0=x GRP1=y GRP0=a			//12+
+	wsync title_sl12 title_sl12 sl4
+	GRP0=a=0xff GRP1=a=0xe0 GRP0=a=0x0f a=0xdf x=0xf8 y=0xf0	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 38, 39, first sta GRP1 @48
+	wsync hmove
+	GRP0=a=0x1f GRP1=a=0xf8 GRP0=a=0x01 a=0xfb x=0xff y=0x98	//21
+	title_sl12 title_sl12 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 title_sl12 sl3
+	GRP0=a=0xcf GRP1=a=0xe0 GRP0=a=0x60 a=0xfc x=0xff y=0x80	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 40, 41, first sta GRP1 @47
+	wsync hmove
+	GRP0=a=0x39 GRP1=a=0xf8 GRP0=a=0x3c a=0x1f x=0x8f y=0x90	//21
+	title_sl12 sl11 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 title_sl12 sl2
+	GRP0=a=0xf8 GRP1=a=0xfc GRP0=a=0xfc a=0x1f x=0x87 y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 42, 43, first sta GRP1 @46
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0x1f GRP0=a=0x9f a=0x01 x=0xf8 y=0xd8	//21
+	title_sl12 sl10 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 title_sl12 
+	GRP0+256=a=0xff GRP1=a=0x1f GRP0=a=0x9f a=0x01 x=0xf8 y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 44, 45, first sta GRP1 @45
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0xe1 GRP0=a=0xf7 a=0xe0 x=0x3f y=0x00	//21
+	title_sl12 sl9 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 title_sl12 
+	GRP0=a=0xff GRP1=a=0xe1 GRP0=a=0xff a=0xc0 x=0x3f y=0x00	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 46, 47, first sta GRP1 @44
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0xf0 GRP0=a=0x3f a=0xf8 x=0x23 y=0xb0	//21
+	title_sl12 sl8 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl11
+	GRP0=a=0x3f GRP1=a=0xe0 GRP0=a=0x1f a=0xe0 x=0x73 y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 48, 49, first sta GRP1 @43
+	wsync hmove
+	GRP0=a=0x07 GRP1=a=0xf0 GRP0=a=0x03 a=0xf8 x=0x3e y=0x78	//21
+	title_sl12 sl7 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl10
+	GRP0=a=0x07 GRP1=a=0xe0 GRP0=a=0x01 a=0xf8 x=0x7e y=0x30	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 50, 51, first sta GRP1 @42
+	wsync hmove
+	GRP0=a=0x39 GRP1=a=0xf8 GRP0=a=0x00 a=0x3f x=0x3f y=0xe0	//21
+	title_sl12 sl6 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl9
+	GRP0=a=0x79 GRP1=a=0xf8 GRP0=a=0x00 a=0x3f x=0x7f y=0x60	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 52, 53, first sta GRP1 @41
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0x3f GRP0=a=0x00 a=0x07 x=0xff y=0x98	//21
+	title_sl12 sl5 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl8
+	GRP0=a=0x7f GRP1=a=0x3f GRP0=a=0x00 a=0x03 x=0xff y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 54, 55, first sta GRP1 @40
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0xe7 GRP0=a=0xe0 a=0x00 x=0x7f y=0x98	//21
+	title_sl12 sl4 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl7
+	GRP0=a=0x7f GRP1=a=0xe3 GRP0=a=0xf0 a=0x00 x=0x3e y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 56, 57, first sta GRP1 @39
+	wsync hmove
+	GRP0=a=0x3f GRP1=a=0xf8 GRP0=a=0x7f a=0x00 x=0x37 y=0x38	//21
+	title_sl12 sl3 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl6
+	GRP0=a=0x7f GRP1=a=0xf0 GRP0=a=0x7f a=0x00 x=0x72 y=0xe0	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 58, 59, first sta GRP1 @38
+	wsync hmove
+	GRP0=a=0x1f GRP1=a=0xf8 GRP0=a=0x07 a=0xf0 x=0x3e y=0x78	//21
+	title_sl12 sl2 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl5
+	GRP0=a=0x1f GRP1=a=0xf0 GRP0=a=0x03 a=0xf8 x=0xfe y=0x60	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 60, 61, first sta GRP1 @37
+	wsync hmove
+	GRP0=a=0x03 GRP1=a=0xf8 GRP0=a=0x18 a=0x7f x=0xff y=0xc0	//21
+	title_sl12  GRP1+256=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl4
+	GRP0=a=0x03 GRP1=a=0xf0 GRP0=a=0x7c a=0x3f x=0xfe y=0x40	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 62, 63, first sta GRP1 @36
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0x7e GRP0=a=0x1f a=0xc3 x=0xff y=0xb8	//21
+	title_sl12 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl3
+	GRP0=a=0x00 GRP1=a=0x7f GRP0=a=0x7f a=0xe3 x=0xfe y=0x60	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 64, 65, first sta GRP1 @35
+	wsync hmove
+	GRP0=a=0x18 GRP1=a=0x07 GRP0=a=0xff a=0xfe x=0x3e y=0x38	//21
+	sl11 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 sl2
+	GRP0=a=0x7c GRP1=a=0x07 GRP0=a=0xff a=0xff x=0x0f y=0xe0	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 66, 67, first sta GRP1 @34
+	wsync hmove
+	GRP0=a=0x1f GRP1=a=0xc0 GRP0=a=0xff a=0xff x=0xe0 y=0x70	//21
+	sl10 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 
+	GRP0+256=a=0x3f GRP1=a=0xe0 GRP0=a=0x7f a=0xf7 x=0xf0 y=0x00	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 68, 69, first sta GRP1 @33
+	wsync hmove
+	GRP0=a=0x07 GRP1=a=0xfe GRP0=a=0x07 a=0xf8 x=0x7e y=0x00	//21
+	sl9 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync title_sl12 
+	GRP0=a=0x07 GRP1=a=0xff GRP0=a=0x03 a=0xf0 x=0x7e y=0x00	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 70, 71, first sta GRP1 @32
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0xff GRP0=a=0xe0 a=0x18 x=0x1f y=0xc0	//21
+	sl8 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync sl11
+	GRP0=a=0x00 GRP1=a=0xff GRP0=a=0xf0 a=0x00 x=0x7f y=0x40	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 72, 73, first sta GRP1 @31
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0x0f GRP0=a=0xbf a=0x00 x=0x1f y=0xd8	//21
+	sl7 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync sl10
+	GRP0=a=0x00 GRP1=a=0x0f GRP0=a=0xbf a=0x80 x=0x7f y=0x30	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 74, 75, first sta GRP1 @30
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0x01 GRP0=a=0xf3 a=0xf8 x=0x1f y=0xdc	//21
+	sl6 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync sl9
+	GRP0=a=0x00 GRP1=a=0x01 GRP0=a=0xf1 a=0xfc x=0x3f y=0x30	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 76, 77, first sta GRP1 @29
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0x01 GRP0=a=0x3e a=0x3f x=0x87 y=0x9c	//21
+	sl5 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync sl8
+	GRP0=a=0x00 GRP1=a=0x07 GRP0=a=0x3e a=0x1f x=0xc6 y=0x70	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+
+
+	//Lines 78, 79, first sta GRP1 @28
+	wsync hmove
+	GRP0=a=0x00 GRP1=a=0x01 GRP0=a=0xe7 a=0xc1 x=0xfc y=0xb8	//21
+	sl4 GRP1=a GRP0=x GRP1=y GRP0=a								//12+
+	wsync sl7
+	GRP0=a=0x00 GRP1=a=0x07 GRP0=a=0xe7 a=0xc1 x=0xfc y=0xf0	//21
+	GRP1=a GRP0=x GRP1=y GRP0=a									//12+
+}
+
+
+/* Prepare and position ball and set ZP vars for logo display
+ */
+func title_init_display {
+	// Prepare ball
+	wsync RESBL=a HMBL=a=[HM_LEFT_2]
+	wsync hmove
+	CTRLPF=a=[BALL_SIZE_8] ENABL=a=[OBJ_ENABLE]
+	
+	// colors
+	COLUPF=COLUBK=a=0
+
+	// Prepare later looped GFX
+	title_display_sloped_ZP+[TITLE_ZP_LINE]=a
+	sl6 HMBL=a
+	
+}
+
+
+/* Display ASCEND logo in three parts: clammed, sloped, unrolled.
+ */
+func title_display_logo {
+	// Prepare and position objects
+	wsync
+	NUSIZ0=NUSIZ1=a=[THREE_COPIES_CLOSE]		// 8
+	VDELP0=VDELP1=a=[VDEL_ENABLE]				// 8
+	HMP0=a=0 HMP1=a=[HM_LEFT_1]					// 10
+	title_sl12 title_sl12 sl3
+	RESP0=a RESP1=a								// @53
+	wsync hmove
+	title_sl12 title_sl12 HMP0=a=[HM_LEFT_3] HMP1=a
+	
+	// Clammed right gfx
+	title_display_logo_clammed_right
+
+	// Looped gfx
+	// @3
+	y=0 sl9
+	call title_display_sloped_ZP_entry
+		
+	// Unrolled gfx
+	// @15
+	title_display_logo_unrolled
+	
+	// Clammed left gfx
+	title_display_logo_clammed_left
+
+	// clean up
+	GRP1=a=0 GRP0=a GRP1=a
+}
+
+
+/* Calc transitions
+ */
+inline title_transitions {
+	a=demoState
+	a?[STATE_TITLE_IN] !=goto .notIn
+	
+	// Fade in
+	a=numFrame
+.calcColor:	
+	a>> a>> a?10 >={a=10}	// 12 fade colors
+	x=a a=title_gradient,x COLUP0=COLUP1=a
+	x?5 >={a=[TITLE_COL_INNER]} title_col_inner=a
+	x?4 >={a=[TITLE_COL_2]} title_col_2=a
+	x?3 >={a=[TITLE_COL_1]} title_col_1=a
+	x?2 >={a=[TITLE_COL_BACK]} title_col_back=a
+	goto .end
+	
+.notIn:
+	a?[STATE_TITLE_OUT] !=goto .notOut
+	a=title_durations+[STATE_TITLE_OUT] c+ a-50	// -50 for pause
+	c+ a-numFrame <{a=0}
+	goto .calcColor
+
+.notOut:
+	// Set logo color if not fading or invisible
+	a?[STATE_TITLE_LOGO] <goto .notBright
+	a?[STATE_TITLE_OUT] >=goto. notBright
+	COLUP0=COLUP1=a=[TITLE_COL_ASCEND]
+
+.notBright:
+.end:
+}
+
+
+/* Calc number fade color according to numFrame
+ */
+func title_number_fade {
+	a=numFrame
+	// If end phase = fade out, use inverse
+	a?41 >={a^0xff c+ a+title_durations+[STATE_TITLE_48]}
+	a?40 >={a=40}
+	a>> a>>
+}
+
+
+/* Display numbers according to state
+ */
+func title_display_numbers {
+	CTRLPF=a=[PF_MIRRORED | BALL_SIZE_8]
+	NUSIZ0=NUSIZ1=VDELP0=VDELP1=a=0
+	PF0=PF1=a
+	wsync wsync
+	a=demoState
+	a?[STATE_TITLE_48] !=goto .not48
+	
+	// 48
+	wsync HMM0=a=[HM_RIGHT_3] HMM1=a=[HM_LEFT_1] HMP0=a=[HM_RIGHT_1] HMP1=a=[HM_NO_MOTION]
+	title_sl12 sl4 RESM0=a sl3 RESP0=a RESP1=a sl5 RESM1=a
+	wsync hmove ENABL=a
+	title_number_fade COLUPF=COLUP0=COLUP1=a
+	x=6 {
+		wsync
+		ENAM0=ENAM1=a=title_number_enam,x
+		PF2=a=title_48_measure,x
+		GRP0=a=title_48_p0,x GRP1=a=title_48_p1,x
+		x--
+	}>=0
+	goto .end
+	
+.not48:
+	a?[STATE_TITLE_96] !=goto .not96
+	
+	// 96
+	a=numFrame a&1 ==goto .do96
+	goto .end
+.do96:
+	wsync HMM0=a=[HM_RIGHT_3] HMM1=a=[HM_LEFT_1] HMP0=a=[HM_RIGHT_1] HMP1=a=[HM_NO_MOTION]
+	sl8 RESM0=a sl11 RESP0=a RESP1=a title_sl12 RESM1+256=a
+	wsync hmove ENABL=a
+	title_number_fade COLUPF=COLUP0=COLUP1=a
+	x=6 {
+		wsync
+		ENAM0=ENAM1=a=title_number_enam,x
+		PF1=a=title_96_measure_pf1,x
+		PF2=a=title_96_measure_pf2,x
+		GRP0=a=title_96_p0,x GRP1=a=title_96_p1,x
+		x--
+	}>=0
+	goto .end
+	
+.not96:
+	a?[STATE_TITLE_140] !=goto .not140
+
+	// 140
+	wsync HMM0=a=[HM_RIGHT_7] HMM1=a=[HM_RIGHT_3] HMP0=a=[HM_RIGHT_1] HMP1=a=[HM_NO_MOTION]
+	RESM0+256=a title_sl12 sl6 RESP0=a RESP1=a title_sl12 sl8 RESM1=a
+	wsync hmove ENABL=a
+	title_number_fade COLUPF=COLUP0=COLUP1=a
+	x=6 {
+		wsync
+		ENAM0=ENAM1=a=title_number_enam,x
+		PF0=a=title_140_measure_pf0_1,x
+		PF1=a=title_140_measure_pf1,x
+		PF2=a=title_96_measure_pf2,x
+		GRP0=a=title_140_p0,x GRP1=a=title_140_p1,x
+		PF0=a=title_140_measure_pf0_2,x
+		x--
+	}>=0
+
+.not140:
+.end:
+	wsync GRP0=GRP1=GRP0=a=0
+}
+
+
+/* Main
+ */
+func title_main {
+	s=x=0xff
+		
+	// Init
+	demoState=a=0 numFrame=a
+
+	// Copy ZP routine
+	a=&<Title_ZP_End c+ a-&<Title_ZP_Start+3 // +3 b/c 2 less for jmp target, 1 less for fence post
+	x=a
+	// fix jmp ptr at the end of the loop
+	title_display_sloped_ZP+1,x=a=&<title_display_sloped_ZP
+	title_display_sloped_ZP+2,x=a=0
+
+	// ...and copy the rest
+	{ title_display_sloped_ZP,x=a=Title_ZP_Start,x x-- x?255 }!=
+
+	// gfx
+	ENAM0=a ENAM1=a
+	==goto TitleStart
+
+	// Kernel
+	{
+		/**************************************************
+		 * Overscan
+		 **************************************************/
+		
+		overscan_start
+
+TitleStart:
+
+		// Script
+		numFrame++
+		x=demoState a=title_durations,x !={
+			a?numFrame =={
+				numFrame=a=0 demoState++
+				a=demoState a?[STATE_TITLE_END] =={far box_main}
+			}
+		}
+
+		title_transitions
+
+		overscan_end
+
+
+		/**************************************************
+		 * VBlank
+		 **************************************************/
+		
+		vblank_start
+
+		far music
+		
+		title_init_display
+				
+		vblank_end
+		
+
+		/**************************************************
+		 * Visible screen
+		 **************************************************/
+		
+		screen_start
+
+		wsync
+		title_display_bar_upper
+		title_display_logo
+		title_display_bar_lower
+		title_display_numbers
+
+		screen_end
+				
+	} always
+}

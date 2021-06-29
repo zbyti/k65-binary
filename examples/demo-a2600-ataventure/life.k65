@@ -1,0 +1,289 @@
+
+
+data CellGfx {
+	align 128
+	0
+	image dma1   0 17 8> 8^ tiles 10 0 7
+	image dma1  10 27 8> 8^ tiles 10 0 6
+}
+
+data CellCol {
+	align 16
+	0
+	for x=0..7 eval [5*16+x*2]
+}
+
+data CellEmerge {
+	6 5 4 3 2 1 1 0 0
+}
+
+data CellDie {
+	8 9 10 11 12 13 14 7 7
+}
+
+func txline2 {
+	y=8 a=(txtc),y cp0=a cp1=a
+	wsync
+	nocross { 
+		// Text routine
+		a=(txtp),y gp0=a a=(txtp+4),y gp1=a hp0=a=0x80 hp1=a a=(txtp+8),y x=a a=(txtp+12),y gp0=x x=a a=(txtp+16),y gp1=x gp0=a a=(txtp+20),y gp1=a
+		a=(txtc),y cp0=a cp1=a a=(txtp+2),y
+			
+			
+		// second scanline
+		hmove=a gp0=a a=(txtp+6),y gp1=a
+		a=(txtp+10),y x=a *5 hp0=a=0x60 hp1=a
+		a=(txtp+14),y gp0=x x=a a=(txtp+18),y gp1=x gp0=a a=(txtp+22),y gp1=a
+						
+		hmove=a *5
+
+		y--
+	}!=
+	gp0=a=0 gp1=a=0
+}
+
+
+
+inline life_next_buff {
+	// in  A - buffer offset
+	// out A - next buffer offset
+	a?0 == { a=18 }
+	else
+	{
+		a?18 == { a=36 } else { a=0 }
+	}
+}
+
+inline life_prev_buff {
+	// in  A - buffer offset
+	// out A - prev buffer offset
+	a?0 == { a=36 }
+	else
+	{
+		a?18 == { a=0 } else { a=18 }
+	}
+}
+
+func life_fill {
+	// tmp1		- empty cell
+	// tmp2		- dying
+	// tmp3		- emerging
+	// tmp4		- alive
+	// fx_data	- target frame pointer
+	// tmp5		- prev frame pointer
+	// endline	- line counter
+
+	a=fx_data c- a+endline x=a		ltemp0=a=frambuff,x	ltemp1=a=frambuff+9,x
+	a=tmp5	  c- a+endline x=a		ltemp2=a=frambuff,x	ltemp3=a=frambuff+9,x
+
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+ 0=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+ 2=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+ 4=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+ 6=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+ 8=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+10=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+12=a=tmp1,x
+	a=0 ltemp0<<< a<<< ltemp2<<< a<<< x=a txtp+14=a=tmp1,x
+	a=0 ltemp1<<< a<<< ltemp3<<< a<<< x=a txtp+16=a=tmp1,x
+	a=0 ltemp1<<< a<<< ltemp3<<< a<<< x=a txtp+18=a=tmp1,x
+	a=0 ltemp1<<< a<<< ltemp3<<< a<<< x=a txtp+20=a=tmp1,x
+	a=0 ltemp1<<< a<<< ltemp3<<< a<<< x=a txtp+22=a=tmp1,x
+}
+
+func life_read_line {
+	y?8 >={
+		a=0    lf_1a,x=a lf_1b,x=a
+		a=0xFF lf_2a,x=a lf_2b,x=a
+	}
+	else
+	{
+		tmp1=y
+		a=y c- a+fx_data y=a
+		a=frambuff,y          lf_1a,x=a a^0xFF lf_2a,x=a
+		a=frambuff+9,y a&0xF0 lf_1b,x=a a^0xFF lf_2b,x=a
+		c+ lf_2a,x>>> lf_2b,x>>>	// delay 2 by one
+		y=tmp1
+	}
+}
+
+inline life_add_bits {
+	lf_1b<<< lf_1a<<< a+0
+	lf_1d<<< lf_1c<<< a+0
+	lf_1f<<< lf_1e<<< a+0
+}
+
+inline life_sub_bits {
+	lf_2b<<< lf_2a<<< a-0
+	lf_2d<<< lf_2c<<< a-0
+	lf_2f<<< lf_2e<<< a-0
+}
+
+func life_logic {
+// lf_1* - bits to add
+// lf_2* - inverted bits to subtract
+//
+// empty	- alive if sum is 3
+// alive	- alive if sum is 3 or 4
+//
+	// init lf_**
+	y=fx_counter
+	y-- x=0 life_read_line
+	y++ x=4 life_read_line
+	y++ x=8 life_read_line
+
+	// inits
+	tmp1=a=lf_1c		// original A
+	tmp2=a=lf_1d		// original B
+	tmp3=a=0			// tmp3/4 - sum==3
+	tmp5=a				// tmp5/6 - sum==4
+	life_add_bits
+
+	// main loop
+	y=12
+	{
+		life_add_bits	// add next row
+		a?3 =={c+} else {c-} tmp4<<< tmp3<<<
+		a?4 =={c+} else {c-} tmp6<<< tmp5<<<
+		life_sub_bits
+		y--
+	}!=
+	y=4
+	{
+		c- tmp4<<< tmp3<<<
+		c- tmp6<<< tmp5<<<
+		y--
+	}!=
+
+	// final composition
+	// tmp34 | (alive & tmp56)
+	a=fx_data life_next_buff c- a+fx_counter y=a
+	a=tmp5 a&tmp1 a|tmp3 frambuff,y=a
+	a=tmp6 a&tmp2 a|tmp4 frambuff+9,y=a
+
+	// next data
+	y=fx_counter y++
+	y?9 =={ y=0 
+		a=fx_data life_next_buff fx_data=a
+	}
+	fx_counter=y
+}
+
+data LifeText {
+	0b10010111 0b01110000
+	0b10010100 0b01000000
+	0b10010110 0b01100000
+	0b10010100 0b01000000
+	0b11010100 0b01110000
+
+	0b01000000 0b00000000
+	0b00100000 0b00000000
+	0b11100000 0b01110000
+	0b00000000 0b01000000
+	0b00000000 0b00100000
+
+	0b00000000 0b00000000
+	0b10010000 0b00000000
+	0b00001000 0b00000000
+	0b10001000 0b00000000
+	0b01111000 0b00000000
+
+	0b00000000 0b00000000
+	0b00000000 0b00000000
+	0b00000100 0b00000000
+	0b00001110 0b00000000
+	0b00000000 0b00000000
+
+	0b00000000 0b00000000
+	0b00000000 0b00000000
+	0b00000100 0b00000000
+	0b00001110 0b00000000
+	0b00000010 0b00000000
+}
+
+func life_init {
+
+	dfx1=x
+
+	far fsync1 far song_player
+	fsync2
+	far fsync3
+
+	tmp1=x=dfx1
+	fbclr
+	x=tmp1 y=1
+	{
+		a=LifeText,x	frambuff,y=a	frambuff+18,y=a x++
+		a=LifeText,x	frambuff+9,y=a	frambuff+27,y=a x++
+		y++
+		y?6
+	}!=
+
+	fx_counter=a=0
+	fx_data=a=0
+	fx_synchro=a=0
+}
+
+func fx_life {
+
+	far fsync1 far song_player
+	fsync2
+
+	a=0x07 a&?subframe =={ fx_synchro++ }
+	a=fx_synchro a?15 >={
+		life_logic
+	} else {
+		a=subframe a&3 =={
+			a=fx_data =={
+				a=fx_counter a?8 =={
+					fx_counter=a=0
+					fx_data=a=18
+				} else {
+					fx_counter++
+				}
+			}
+		}
+	}
+
+	a=&>CellGfx
+	y=23
+	{ txtp,y=a y-- y-- }>=0
+
+	far fsync3
+
+	txinit
+	
+	txtc=a=&<CellCol
+	txtc+1=a=&>CellCol
+
+	// tmp1		- empty cell
+	// tmp2		- dying
+	// tmp3		- emerging
+	// tmp4		- alive
+	// fx_data	- target frame pointer
+	// tmp5		- prev frame pointer
+	// endline	- line counter
+	y=fx_counter
+	a=&<CellGfx+56							tmp1=a
+	a=CellDie,y		a<< a<< a<<	a|&<CellGfx	tmp2=a
+	a=CellEmerge,y	a<< a<< a<<	a|&<CellGfx	tmp3=a
+	a=midframe a&1	a<< a<< a<<	a|&<CellGfx	tmp4=a
+	a=fx_data life_prev_buff				tmp5=a
+
+	endline=a=0
+	{
+		life_fill
+		txline2
+		endline++
+		a=8 a?endline
+	}!=
+}
+
+
+func seq_life {
+	// total 32 bars
+	x=0  life_init		{ fx_life	a=demo_event a?8  }< demo_event=a=0			// OK
+	x=10 life_init		{ fx_life	a=demo_event a?3  }< demo_event=a=0			// OK
+	x=20 life_init		{ fx_life	a=demo_event a?5  }< demo_event=a=0			// OK
+//	x=30 life_init		{ fx_life	a=demo_event a?4  }< demo_event=a=0			// OK
+//	x=40 life_init		{ fx_life	a=demo_event a?10 }< demo_event=a=0			// OK
+}

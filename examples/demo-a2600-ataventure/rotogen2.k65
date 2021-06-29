@@ -1,0 +1,61 @@
+func scanliner2 {
+    pf1=y=frambuff,x        // [s0  6]  +7 = s0 13  -k0-
+    x++                     // [s0 13]  +2 = s0 15  
+    gp0=y=frambuff+32,x     // [s0 15]  +7 = s0 22  
+    a=px3 a+px2 px3=a       // [s0 22]  +9 = s0 31  start X computation
+    a+px1 a?0x80 tmp3<<<    // [s0 31] +10 = s0 41  do X
+    pf1=y=tmp7              // [s0 41]  +7 = s0 48  -k1-
+    a+px1 a?0x80 tmp3<<<    // [s0 48] +10 = s0 58  do X
+    a+px1 a?0x80 tmp3<<<    // [s0 58] +10 = s0 68  do X
+    a+px1 a?0x80 tmp3<<<    // [s0 68] +10 = s1  2  do X
+    pf1=y=frambuff,x        // [s1  2]  +7 = s1  9  -k0-
+    a+px1 a?0x80 tmp3<<<    // [s1  9] +10 = s1 19  do X
+    a+px1 a?0x80 tmp3<<<    // [s1 19] +10 = s1 29  do X
+    a+px1 a?0x80 tmp3<<<    // [s1 29] +10 = s1 39  do X
+    pf1=y=tmp7              // [s1 39]  +7 = s1 46  -k1-
+    a+px1 a?0x80 tmp3<<<    // [s1 46] +10 = s1 56  do X
+    a+px1 a?0x80 tmp4>>>    // [s1 56] +10 = s1 66  do X
+    a+px1 a?0x80 tmp4>>>    // [s1 66] +10 = s2  0  do X
+    pf1=y=frambuff,x        // [s2  0]  +7 = s2  7  -k0-
+    a+px1 a?0x80 tmp4>>>    // [s2  7] +10 = s2 17  do X
+    a+px1 a?0x80 tmp4>>>    // [s2 17] +10 = s2 27  do X
+    a+px1 a?0x80 tmp4>>>    // [s2 27] +10 = s2 37  do X
+    pf1=y=tmp7              // [s2 37]  +7 = s2 44  -k1-
+    a+px1 a?0x80 tmp4>>>    // [s2 44] +10 = s2 54  do X
+    a+px1 a?0x80 tmp4>>>    // [s2 54] +10 = s2 64  do X
+    a+px1 a?0x80 tmp4>>>    // [s2 64] +10 = s2 74  do X
+    a=py3 a+py2 py3=a       // [s2 74]  +9 = s3  7  start Y computation
+    pf1=y=frambuff,x        // [s3  7]  +7 = s3 14  -k0-
+    a+py1 a?0x80 tmp5<<<    // [s3 14] +10 = s3 24  do Y
+    a+py1 a?0x80 tmp5<<<    // [s3 24] +10 = s3 34  do Y
+    a+py1 a?0x80 tmp5<<<    // [s3 34] +10 = s3 44  do Y
+    pf1=y=tmp7              // [s3 44]  +7 = s3 51  -k1-
+    a+py1 a?0x80 tmp5<<<    // [s3 51] +10 = s3 61  do Y
+    a+py1 a?0x80 tmp5<<<    // [s3 61] +10 = s3 71  do Y
+    a+py1 a?0x80 tmp5<<<    // [s3 71] +10 = s4  5  do Y
+    pf1=y=frambuff,x        // [s4  5]  +7 = s4 12  -k0-
+    a+py1 a?0x80 tmp5<<<    // [s4 12] +10 = s4 22  do Y
+    a+py1 a?0x80 tmp5<<<    // [s4 22] +10 = s4 32  do Y
+    a+py1 a?0x80 tmp6>>>    // [s4 32] +10 = s4 42  do Y
+    pf1=y=tmp7              // [s4 42]  +7 = s4 49  -k1-
+    a+py1 a?0x80 tmp6>>>    // [s4 49] +10 = s4 59  do Y
+    a+py1 a?0x80 tmp6>>>    // [s4 59] +10 = s4 69  do Y
+    a+py1 a?0x80 tmp6>>>    // [s4 69] +10 = s5  3  do Y
+    pf1=y=frambuff,x        // [s5  3]  +7 = s5 10  -k0-
+    a+py1 a?0x80 tmp6>>>    // [s5 10] +10 = s5 20  do Y
+    a+py1 a?0x80 tmp6>>>    // [s5 20] +10 = s5 30  do Y
+    a+py1 a?0x80 tmp6>>>    // [s5 30] +10 = s5 40  do Y
+    pf1=y=tmp7              // [s5 40]  +7 = s5 47  -k1-
+    a+py1 a?0x80 tmp6>>>    // [s5 47] +10 = s5 57  do Y
+    a=tmp3 a^tmp5 gp1=a     // [s5 57]  +9 = s5 66  finalize 1
+    a=tmp4 a^tmp6 tmp7=a    // [s5 66]  +9 = s5 75  finalize 2
+    a=x c- a+dfx2 a&dfx3    // [s5 75] +10 = s6  9  
+    pf1=y=frambuff,x        // [s6  9]  +7 = s6 16  -k0-
+    tmp1=a                  // [s6 16]  +3 = s6 19  
+    y=0 a=(tmp1),y          // [s6 19]  +7 = s6 26  
+    a&dfxN c- a+dfx4 cbg=a  // [s6 26] +11 = s6 37  
+    pf1=y=tmp7              // [s6 37]  +7 = s6 44  -k1-
+    *4                      // [s6 44]  +4 = s6 48  
+    x?18                    // [s6 48]  +2 = s6 50  
+                            // [s6 50]  +0 = s6 50  
+}

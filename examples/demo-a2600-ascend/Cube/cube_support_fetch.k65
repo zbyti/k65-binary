@@ -1,0 +1,9 @@
+/* Fetch frame data from (tmp) to cube_M0Xpos (=incoming).
+ * Size must be in y.
+ */
+func cube_fetch_frame {
+	y-- {
+		cube_M0XPos,y=a=(tmp),y
+		y--
+	}>=0
+}

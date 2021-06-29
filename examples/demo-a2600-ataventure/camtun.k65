@@ -1,0 +1,112 @@
+
+
+data Rot {
+	for x=0..127 eval [cos(x/64*2*pi)*32+256]
+}
+
+
+
+func fx_newtun {
+
+	far fsync1 far song_player
+
+	fsync2
+	a=subframe a&0x3F x=a a=Rot,x tmp1=a
+	a=subframe c- a+16 a&0x3F x=a a=Rot,x tmp2=a
+	x=13	y=10	far fbhalfxor
+
+	far fsync3
+		
+	a=subframe c- a+16 a&0x3F x=a a=Rot,x tmp1=a
+	a=subframe c- a+32 a&0x3F x=a a=Rot,x tmp2=a
+	x=13	y=10	far fbhalfxor
+
+	//x=13	y=10	tmp1=a=10	tmp2=a=0xF9	far fbhalfxor
+	//x=13	y=10	tmp1=a=0xFB	tmp2=a=7	far fbhalfxor
+
+	{ a=INTIM a?175 }!=
+
+	wsync
+	txtc=a=0
+	txtc+1=a=&>BufCol
+	far drawbuffer
+	fbclr
+
+}
+
+data FulSin {
+	align 256
+	for x=0..255 eval [sin(x/256*2*pi*3)*31+32+256]
+}
+
+data FulCol {
+	align 64
+	for x=0..63 eval [e=x/63+sin(x+sin(x)*10)*.1, e=e+.2, color(e,e,e)]
+}
+
+data FulColB {
+	align 64
+	for x=0..63 eval [e=x/63+sin(x+sin(x)*10)*.1, e=e-.3, color(e,e,e)]
+}
+
+func camel {
+
+	// tmp1 - end
+	// tmp2 - angle A / base
+	// tmp3	- angle B
+	// tmp4 - spread
+	cpf=a=15
+	tmp1=a=90
+	
+	a=smallframe tmp4=a
+	
+	a=demo_event
+	a&2 =={ a=subframe a<< }
+	else  { a=subframe y=a a=FulSin,y y++ c- a+FulSin,y }
+	
+	tmp2=a
+	a=tmp2 c- a+tmp4 tmp3=a
+	a=tmp2 c+ a-tmp4 tmp2=a
+
+	a=songpos_seq a<< a<< a<< a<<	a|songpos_step a<< a<<		a&0xF0	px0=a
+//	a=songpos_seq a<< a<< a<< a<<	a|songpos_step a<< a<< a<<	a&0xF0	c- a+0x30 a^0xA0 px0=a
+	py0=a=0
+	a=demo_event a?4 <{ px0=a=0 }
+
+	y=0
+	nocross {
+		x=tmp2 tmp4=a=FulSin,x
+		x=tmp3 c- a+FulSin,x
+		a>> x=a
+		
+		tmp2++
+		tmp3++
+
+		a=FulCol,x a|px0
+		wsync
+		cbg=a
+		a=FulColB,x a|py0 cpf=a
+		pf1=a=lins1,x		// 7
+		pf2=a=lins2,x		// 7
+		pf0=a=lins05,x		// 7
+		y++
+		y?tmp1
+	}!=
+	wsync
+	cbg=a=0;
+	cpf=a=0
+}
+
+
+func seq_camel {
+	{
+		far fsync1 far song_player
+		fsync2
+		far fsync3
+
+		camel
+
+		a=demo_event a?8
+	}<
+	demo_event=a=0
+}

@@ -1,0 +1,110 @@
+
+var screen = 0x8000;
+var sbuff  = 0x8800;
+var ptr[2] = 0x02;
+var frame;
+
+
+data displist {
+	nocross
+	0x70
+	0x70
+	0x70
+	0x49 &<screen &>screen
+	for x=2..48 eval [0x09]
+	0x41 &<displist &>displist
+}
+
+data face {
+	0b00111100
+	0b01000010
+	0b10000101
+	0b10100001
+	0b10000101
+	0b10111001
+	0b01000010
+	0b00111100
+}
+
+func nmi_fn {
+	a!!
+	a??
+	return_i
+}
+
+func clbuff {
+	a=0
+	x=48 {
+		sbuff-[0*48-1],x=a
+		sbuff-[1*48-1],x=a
+		sbuff-[2*48-1],x=a
+		sbuff-[3*48-1],x=a
+		sbuff-[4*48-1],x=a
+		sbuff-[5*48-1],x=a
+		sbuff-[6*48-1],x=a
+		sbuff-[7*48-1],x=a
+		sbuff-[8*48-1],x=a
+		sbuff-[9*48-1],x=a
+		x--
+	}!=
+}
+
+func fill_resolve {
+	a=0
+	x=48 {
+		a^sbuff,x		screen,x=a
+		a^sbuff+10,x	screen+10,x=a
+		x--
+	}!=
+}
+
+main {
+	// disable OS
+	NMIEN=a=0
+	DMACTL=a=0
+	i+
+	PORTB=a=0xFE
+	s=x=0xFF
+
+	COLBK =a=0x00
+	COLPF0=a=0x0F
+	COLPF1=a=0x5F
+	COLPF2=a=0x8F
+	COLPF3=a=0xCF
+	PRIOR=a=0x00
+	DLISTL=a=&<displist
+	DLISTH=a=&>displist
+	DMACTL=a=0x22
+
+	NMIADL=a=&<nmi_fn
+	NMIADH=a=&>nmi_fn
+	NMIEN=a=0x80
+
+	x=0 { a=x screen,x=a x++ }!=
+	x=0 { a=x screen+256,x=a x++ }!=
+	x=0 { a=x screen+512,x=a x++ }!=
+
+//	ptr=a=&<screen ptr+1=a=&>screen
+//	y=0
+//	x=0 {
+//		a=face,x
+//		(ptr),y=a
+//		c- a=ptr a+10 ptr=a a=ptr+1 a+0 ptr+1=a
+//		x++
+//		x?8
+//	}!=
+
+
+	{
+		{ a=VCOUNT }!=
+		frame++
+//		a=frame a<< a<< c- a+frame a<<
+//		x=0 { c- a+1 screen,x=a x++ }!=
+//		x=0 { c- a+1 screen+256,x=a x++ }!=
+//		x=0 { c- a+1 screen+512,x=a x++ }!=
+
+		clbuff
+
+	} always
+
+}

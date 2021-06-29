@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Data Files">
+      <UniqueIdentifier>{2F0251E1-93F2-489F-A238-D9ABA00C5440}</UniqueIdentifier>
+      <Extensions>bmp</Extensions>
+    </Filter>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{8DD2030B-3ED6-46FD-A221-79533935068E}</UniqueIdentifier>
+      <Extensions>awk;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{CFFF2897-8266-481A-AAD0-96FA5000D27B}</UniqueIdentifier>
+      <Extensions>k65</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="!codegen.bat">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="!run.bat">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_codegen.awk">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_codegen2.awk">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_codegen3.awk">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_cubecoregen.awk">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_defs.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="_demoregs.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="_txlib.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="camtun.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cube.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cube2.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cube3.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cubegen.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="data.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="dma1.bmp">
+      <Filter>Data Files</Filter>
+    </None>
+    <None Include="dma4x5.bmp">
+      <Filter>Data Files</Filter>
+    </None>
+    <None Include="dotball.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="files.lst" />
+    <None Include="framebuffer.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="framing.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="genlines.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="gentex.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="life.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="main.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="player.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="proctungen.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="rotogen.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="rotogen2.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="rototex.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="rotozoom.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="song.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="starfield.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="startext.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="tundata.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="xortun.k65">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

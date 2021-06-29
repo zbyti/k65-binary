@@ -1,0 +1,372 @@
+
+
+data Cube2ColTab {
+	align 256
+	0x06 0x08 0x0A 0x0C 0x0E
+	for x=0..248 eval [0]
+	0x02 0x04
+	
+	//for x=0..255 eval [124]
+
+	//for x=0..255 eval [v=(x>=128?x-256:x), e=1-2/(v+4), color(e,e-1,e-1)]
+	//for x=0..255 eval [x*4+8]
+}
+
+
+func cube2_blank {
+	// xpos = 80 - X
+	// ypos = 80 + X
+	// xcrude = (80-X)/15
+
+	x=a tmp2=a=CubeMoveH,x
+	y=CubeMoveX,x a=CubeMoveY,x c+
+	!=	 { wsync x=0 cp0=x cp1=x {y--}!= rp0=a {a-1}!= rp1=a }
+	else { wsync x=0 cp0=x cp1=x {y--}!= rp0=a rp1=a }
+	a=tmp2 hp0=a a<< a<< a<< a<< hp1=a
+
+	goto cube2_rts
+}
+
+data CubeSine {
+	align 64
+	for x=0..63 eval [22+21*cos(x/64*2*pi)]
+}
+
+func cube2_core {
+
+	// run
+	gp0=a=0 gp1=a cp0=a cp1=a
+	ns0=a=7 ns1=a
+	gp0=a=0xFF gp1=a
+	tmp3=a=0x80
+	tmp5=a=0xF0
+
+	a=smallframe a&0x3F y=a x=CubeSine,y { wsync x-- }!=
+
+	wsync
+	nocross {
+
+		y=63
+		{
+			tmp1=y
+			
+			a=frambuff,y
+			=={
+				wsync
+				wsync a=0 cp0=a cp1=a
+			}
+			else
+			{
+				x=a c+ a-tmp3 tmp4=a c- a+7 tmp3=x
+				//a&?tmp5
+				a?15
+				>={ a=x goto cube2_blank }
+				a+1 a<< a<< a<< a<< a^0x80 hp0=a a^0xF0 c- a+0x10 hp1=a
+				wsync
+
+				cube2_rts:
+				x=tmp4 a=Cube2ColTab,x
+				wsync hmove=a cp0=a cp1=a
+			}
+			y=tmp1
+			y--
+		}!=
+	}
+	wsync
+	wsync
+	gp0=a=0 gp1=a
+
+	//y=50 { wsync y-- }!=
+	//cbg=a=0x3F wsync cbg=a=0
+}
+
+
+
+func cube2_line {
+	// input:
+	//	X		- start position X
+	//	Y		- start position Y
+	//  clx2	- end position X
+	//	cly2	- end position Y
+	//
+	// temps:
+	//	cldx	- X delta
+	//	cldy	- Y delta
+
+	clstep=a=0
+	clpos=x
+
+	a=y c- a-cly2 a^0xFF cldy=a		// Y delta
+	=={ cldy=a=0xFF }
+	<0 { goto c2l_end }
+
+	a=x c+ a-clx2 // X delta
+	<0 {
+		c+ a-1 a^0xFF
+		a?cldy >={ nocross { c+ a-cldy clstep++ a?cldy }>= }
+		cldx=a
+
+		a=cldy a>> c+ a-cldy clbal=a
+		nocross {
+			a=clbal
+			c- a+cldx
+			>=0 {
+				a-cldy
+				c+
+			}
+			clbal=a
+			a=clpos
+			a+clstep
+			clpos=a
+			
+			//a?frambuff,y >={ frambuff,y=a }
+			frambuff,y=a
+			
+			y++ y?cly2
+		}!=
+	} else {
+		a?cldy >={ nocross { c+ a-cldy clstep++ a?cldy }>= }
+		cldx=a
+
+		a=cldy a>> c+ a-cldy clbal=a
+		nocross {
+			a=clbal
+			c- a+cldx
+			>=0 {
+				a-cldy
+			} else {
+				c+
+			}
+			clbal=a
+			a=clpos
+			a-clstep
+			clpos=a
+			
+			//a?frambuff,y >={ frambuff,y=a }
+			frambuff,y=a
+			
+			y++ y?cly2
+		}!=
+	}
+
+	c2l_end:
+}
+
+data CubeSineX {
+	align 64
+	for x=0..63 eval [cos(x/64*2*pi)*8.2+8.2]
+}
+
+data CubeSineY {
+	align 64
+	for x=0..63 eval [sin(x/64*2*pi)*31+32]
+}
+
+data CubeSineXSm {
+	align 64
+	for x=0..63 eval [cos(x/64*2*pi)*4.2+4.2]
+}
+
+data CubeSineYSm {
+	align 64
+	for x=0..63 eval [sin(x/64*2*pi)*8+12]
+}
+
+data CubeSineXSmR {
+	align 64
+	for x=0..63 eval [cos(x/64*2*pi)*4.2+4.2]
+}
+
+data CubeSineYSmR {
+	align 64
+	for x=0..63 eval [sin(x/64*2*pi)*21+22]
+}
+
+data Cube2Sine {
+	align 64
+	for x=0..63 eval [sin(x/15*2*pi)*11+12]
+}
+
+data CubeStamp {
+	align 128
+  2  2  3  3  4  4  5  5  5  5  4  4  3  3  2  2
+  2  3  3  3  4  4  4  5  5  5  5  4  3  3  2  1
+  3  3  3  4  4  4  4  4  5  5  5  5  4  3  1  1
+  0  4  4  4  4  4  4  4  4  4  4  5  5  3  1  0
+  0  0  4  4  4  4  4  4  4  4  4  4  4  4  0  0
+  0  1  3  5  5  4  4  4  4  4  4  4  4  4  4  0
+  1  1  3  4  5  5  5  5  4  4  4  4  4  3  3  3
+  1  2  3  3  4  5  5  5  5  4  4  4  3  3  3  2
+}
+
+
+func stamp_small_cube {
+	// inputs:
+	//		A		- frame
+	//		dfx1	- X position
+	//		X		- Y position
+	a&7 a<< a<< a<< a<< a|&<CubeStamp txtc=a
+	txtc+1=a=&>CubeStamp
+
+	y=15
+	nocross {
+		a=(txtc),y
+		!={
+			c- a+dfx1
+			a?frambuff,x >={ frambuff,x=a }
+		}
+		x++
+		y--
+	}>=0
+
+}
+
+
+inline smcb_corner	{	a=ddD c+ a-16 a&0x3F ddD=a y=a			}
+inline smcb_xy		{	a=CubeSineXSm,y c- a+dfx1 x=a	ddA=x
+						a=CubeSineYSm,y c- a+dfx2 y=a	ddB=y	}
+inline smcb_xy2		{	a=CubeSineXSm,y c- a+dfx1 clx2=a
+						a=CubeSineYSm,y c- a+dfx2 cly2=a	}
+inline smcb_tmp2	{	clx2=a=ddA cly2=a=ddB }
+
+
+func draw_small_cube {
+	// inputs:
+	//	
+
+	a=smallframe a^0xFF ddD=a
+	smcb_corner		smcb_xy2
+	smcb_corner		smcb_xy
+	cube2_line
+
+	smcb_tmp2	smcb_corner		smcb_xy
+	cube2_line
+
+	smcb_tmp2	smcb_corner		smcb_xy
+	cube2_line
+
+	smcb_tmp2	smcb_corner		smcb_xy
+	cube2_line
+}
+
+func fx_cube2 {
+
+	//x=15 y=10 clx2=a=4 cly2=a=20 cube2_line
+
+
+
+/*	// Rasterizing two rotating blocks
+	a=smallframe a^0xFF a&0x1F c- a+0x08 a&0x3F y=a dfx2=a=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y
+	draw_small_cube
+
+	a=smallframe a^0xFF a&0x1F c- a+0x28 a&0x3F y=a dfx2=a=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y
+	draw_small_cube
+*/
+
+
+	//y=63 { a=Cube2Sine,y frambuff,y=a y-- }!=
+	far fsync3
+	cube2_core
+	fbclr
+}
+
+func c2m_1 {
+	a=subframe a^0xFF c- a+0		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+32		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	x=22 dfx1=a=4																				a=smallframe	stamp_small_cube
+	x=22 dfx1=a=4																				a=smallframe	stamp_small_cube
+}
+func c2m_2 {
+	a=subframe a^0xFF c- a+0		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+16		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+32		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+48		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+}
+func c2m_3 {
+	a=subframe a^0xFF c- a+0		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+21		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+42		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	x=22 dfx1=a=4																				a=smallframe	stamp_small_cube
+}
+func c2m_4 {
+	a=subframe a^0xFF c- a+0		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+8		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+16		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+24		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+}
+func c2m_5 {
+	a=subframe a^0xFF c- a+0		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+8		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+32		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+	a=subframe a^0xFF c- a+40		a&0x3F y=a x=CubeSineYSmR,y dfx1=a=CubeSineXSmR,y			a=smallframe	stamp_small_cube
+}
+
+inline c2_sel {
+		a=demo_event
+		a?4 >= goto ccc_b
+			c2m_1
+		goto ccc_end
+
+		ccc_b:
+		a?6 >= goto ccc_c
+			c2m_2
+		goto ccc_end
+
+		ccc_c:
+		a?8 >= goto ccc_d
+			c2m_3
+		goto ccc_end
+
+		ccc_d:
+		a?10 >= goto ccc_e
+			c2m_4
+		goto ccc_end
+
+		ccc_e:
+			c2m_5
+		goto ccc_end
+	ccc_end: *2
+}
+
+
+func c2_big {
+			// Rasterizing big CUBE
+			a=subframe a^0xFF         a&0x3F y=a	clx2=a=CubeSineX,y cly2=a=CubeSineY,y
+			a=subframe a^0xFF c+ a-16 a&0x3F y=a x=CubeSineX,y y=a=CubeSineY,y
+			cube2_line
+
+			a=subframe a^0xFF c+ a-16 a&0x3F y=a	clx2=a=CubeSineX,y cly2=a=CubeSineY,y
+			a=subframe a^0xFF c+ a-32 a&0x3F y=a x=CubeSineX,y y=a=CubeSineY,y
+			cube2_line
+
+			a=subframe a^0xFF c+ a-32 a&0x3F y=a	clx2=a=CubeSineX,y cly2=a=CubeSineY,y
+			a=subframe a^0xFF c+ a-48 a&0x3F y=a x=CubeSineX,y y=a=CubeSineY,y
+			cube2_line
+
+			a=subframe a^0xFF c+ a-48 a&0x3F y=a	clx2=a=CubeSineX,y cly2=a=CubeSineY,y
+			a=subframe a^0xFF         a&0x3F y=a x=CubeSineX,y y=a=CubeSineY,y
+			cube2_line
+}
+
+
+func seq_cube2 {
+	{
+		far fsync1 far song_player
+		fsync2
+		
+		a=demo_event
+		a?2
+		>={
+			c2_sel
+		}
+		else
+		{
+			c2_big
+		}
+
+		fx_cube2
+
+		a=demo_event a?12
+	}<
+	demo_event=a=0
+}

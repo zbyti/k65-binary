@@ -1,0 +1,204 @@
+
+
+
+inline txinit {
+	wsync gp0=a=0 gp1=a hmclr=a ns0=a=6 ns1=a
+	hp0=a=0xE0 hp1=a=0xD0 rp0=a *2 rp1=a
+	wsync hmove=a *24 hp0=a=0x80 hp1=a
+}
+
+func txinit_scroll {
+	// A - position
+	wsync c- a+10 { a-15 }>=0 a<< a<< a<< a<< a^0x70 hp1=a c- a+0x10 hp0=a rp0=a *2 rp1=a
+	wsync hmove=a ns0=a=6 ns1=a
+	cpf=a=0 ctpf=a=5 pf0=a=0xF0 pf1=a=0xFC
+}
+
+func txinit_scroll_rev {
+	// A - position
+	wsync c- a+10 { a-15 }>=0 a<< a<< a<< a<< a^0x70 hp0=a c- a+0x10 hp1=a rp1=a *2 rp0=a
+	wsync hmove=a ns0=a=6 ns1=a
+	cpf=a=0 ctpf=a=5 pf0=a=0xF0 pf1=a=0xFC
+}
+
+func txline {
+	y=8 a=(txtc),y cp0=a cp1=a x=0x80
+	wsync
+	nocross { 
+		// Text routine
+		a=(txtp),y		// 5
+		gp0=a			// 3
+		a=(txtp+4),y	// 5
+		gp1=a			// 3
+		hp0=x			// 3
+		hp1=x			// 3
+		a=(txtp+8),y	// 5
+		x=a				// 2
+		a=(txtp+12),y	// 5
+		gp0h=x			// 3
+		x=a				// 2
+		a=(txtp+16),y	// 5
+		gp1=x			// 3
+		gp0=a			// 3
+		a=(txtp+20),y	// 5
+		gp1=a			// 3
+		a=(txtc),y		// 5
+		cp0h=a			// 4
+		cp1=a			// 3
+		a=(txtp+2),y	// 5
+			
+		// second scanline
+		hmove=a gp0=a a=(txtp+6),y gp1=a
+		a=(txtp+10),y x=a *4 hp0=a=0x60 hp1=a
+		a=(txtp+14),y gp0=x x=a a=(txtp+18),y gp1=x gp0=a a=(txtp+22),y gp1=a
+						
+		hmove=a *4 x=0x80
+
+		y--
+	}!=
+	gp0=a=0 gp1=a=0
+}
+
+func txline_rev {
+	y=8 a=(txtc),y cp0=a cp1=a hp0=a=0 hp1=a
+	wsync
+	nocross { 
+		// second scanline
+		hmove=a			// 3
+		a=(txtp+2),y	// 5
+		gp0=a			// 3
+		a=(txtp+6),y	// 5
+		gp1=a			// 3
+		a=(txtp+10),y	// 5
+		x=a				// 2
+		*7
+		a=(txtp+14),y
+		gp0=x
+		x=a
+		a=(txtp+18),y
+		gp1=x			// ^^ 1
+		gp0=a
+		a=(txtp+22),y
+		gp1=a			// ^^ 1
+					
+		a=0 hp0h=a hp1=a	// 2+4+3
+		hmove=a
+		x=0x80
+
+
+		// Text routine
+		a=(txtp),y		// 5
+		gp0=a			// 3
+		a=(txtp+4),y	// 5
+		gp1=a			// 3
+		hp0=x			// 3
+		hp1=x			// 3
+		a=(txtp+8),y	// 5
+		x=a				// 2
+		a=(txtp+12),y	// 5
+		gp0h=x			// 3
+		x=a				// 2
+		a=(txtp+16),y	// 5
+		gp1=x			// 3
+		gp0=a			// 3
+		a=(txtp+20),y	// 5
+		gp1=a			// 3
+		a=(txtc),y		// 5
+		cp0h=a			// 4
+		cp1=a			// 3
+
+			
+
+		y--
+	}!=
+	gp0=a=0 gp1=a=0
+}
+
+func txline_inv {
+	y=8 a=(txtc),y cpf=a cpf=a x=0x80
+	wsync
+	nocross { 
+		// Text routine
+		a=(txtp),y		// 5
+		gp0=a			// 3
+		a=(txtp+4),y	// 5
+		gp1=a			// 3
+		hp0=x			// 3
+		hp1=x			// 3
+		a=(txtp+8),y	// 5
+		x=a				// 2
+		a=(txtp+12),y	// 5
+		gp0h=x			// 3
+		x=a				// 2
+		a=(txtp+16),y	// 5
+		gp1=x			// 3
+		gp0=a			// 3
+		a=(txtp+20),y	// 5
+		gp1=a			// 3
+		a=(txtc),y		// 5
+		cpfh=a			// 4
+		cpf=a			// 3
+		a=(txtp+2),y	// 5
+			
+		// second scanline
+		hmove=a gp0=a a=(txtp+6),y gp1=a
+		a=(txtp+10),y x=a *4 hp0=a=0x60 hp1=a
+		a=(txtp+14),y gp0=x x=a a=(txtp+18),y gp1=x gp0=a a=(txtp+22),y gp1=a
+						
+		hmove=a *4 x=0x80
+
+		y--
+	}!=
+	gp0=a=0 gp1=a=0
+}
+
+
+//
+// cycle counter:
+//	a/x/y = ##			2
+//	a/x/y = var			3
+//	a/x/y = var,x		4 (+1)
+//	a     = (var),y		5 (+1)
+//  var   = a/x/y		3
+//  a/x/y = a/x/y		2
+//
+
+// A - character number
+// X - slot (on return: X+2)
+inline chr {
+	a<< a<< a<< txtp,x=a x++ x++
+}
+
+// A - page index of charset
+func txcharset {
+	x=1
+	{
+		txtp,x=a x++ x++
+		txtp,x=a x++ x++
+		txtp,x=a x++ x++
+		txtp,x=a x++ x++
+		x?25
+	}!=
+}
+
+func rdline {
+	//x=0
+	//{ a=(tmp1),y y++ chr x?24 }!=
+	y=0
+	a=(tmp1),y txtp+ 0=a y++
+	a=(tmp1),y txtp+ 2=a y++
+	a=(tmp1),y txtp+ 4=a y++
+	a=(tmp1),y txtp+ 6=a y++
+	a=(tmp1),y txtp+ 8=a y++
+	a=(tmp1),y txtp+10=a y++
+	a=(tmp1),y txtp+12=a y++
+	a=(tmp1),y txtp+14=a y++
+	a=(tmp1),y txtp+16=a y++
+	a=(tmp1),y txtp+18=a y++
+	a=(tmp1),y txtp+20=a y++
+	a=(tmp1),y txtp+22=a y++
+
+
+	c- a=tmp1 a+12 tmp1=a
+	   a=tmp2 a+0  tmp2=a
+}

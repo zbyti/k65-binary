@@ -1,0 +1,453 @@
+/*
+ * Optimize:
+ * - Size: Remove cluster_13+46 from present pointers and instead eliminate sine in code
+ */
+
+[
+	INTRO_FRAME_COL = 9*16+6,
+	INTRO_SQUARE_HEIGHT = 7,
+	INTRO_ZP_COUNT = 1,
+	INTRO_ZP_PTR1 = 3,
+	INTRO_ZP_PTR2 = 8,
+	INTRO_ZP_PTR3 = 13,
+	INTRO_ZP_PTR4 = 33,
+	INTRO_ZP_PTR5 = 23,
+	INTRO_ZP_PTR6 = 18,
+	INTRO_ZP_TMP = 36,
+	INTRO_ZP_COLPTR = 26
+]
+
+[
+	STATE_INTRO_INITIALPAUSE = 0,
+	STATE_INTRO_TRANS_IN = 1,
+	STATE_INTRO_CLUSTER_IN = 2,
+	STATE_INTRO_CLUSTER_OUT = 3,
+	STATE_INTRO_DMA_IN = 4,
+	STATE_INTRO_DMA_OUT = 5,
+	STATE_INTRO_PRESENT_IN = 6,
+	STATE_INTRO_PRESENT_OUT = 7,
+	STATE_INTRO_TRANS_OUT = 8,
+	STATE_INTRO_END = 9
+]
+
+
+var intro_ptr[2] = 0x84, intro_ptr2[2];
+var intro_top_colors[6], intro_bottom_colors[6] ?;
+var intro_zp_routine = 0x94 ?;
+var intro_varend ?;
+
+
+/* sl12
+ */
+func intro_sl12 {
+}
+
+
+/* Waste x lines.
+ */
+func intro_waste_lines {
+	{wsync x--}!=
+}
+
+
+
+
+
+/* Fine-position object.
+ * Pos in a, index in x. No hmove done.
+ */
+func intro_pos_object {
+	wsync intro_sl12 c+ nocross{a-15}>= RESP0+256,x=a
+	a^7 a<< a<< a<< a<< HMP0,x=a
+}
+
+
+/* Display top frame
+ */
+func intro_top_frame {
+	COLUPF=a=[INTRO_FRAME_COL]
+	
+	x=5 {
+		y=[INTRO_SQUARE_HEIGHT] {
+			wsync
+			COLUPF=a=intro_top_colors,x	//7
+			PF0=a=squares_top+0,x PF1=a=squares_top+6,x PF2=a=squares_top+12,x	// 21
+			PF0=a=squares_top+18,x	// 7
+			sl4
+			PF1=a=squares_top+24,x	// 7
+			sl4
+			PF2=a=squares_top+30,x	// 7
+			y--
+		} !=
+		x--
+	} >=0
+	wsync PF0=PF1=PF2=COLUPF=y
+}
+
+
+/* Display bottom frame
+ */
+func intro_bottom_frame {
+	COLUPF=a=[INTRO_FRAME_COL]
+
+	x=5 {
+		y=[INTRO_SQUARE_HEIGHT] {
+			wsync
+			COLUPF=a=intro_bottom_colors,x	//7
+			PF0=a=squares_bottom+0,x PF1=a=squares_bottom+6,x PF2=a=squares_bottom+12,x	// 21
+			PF0=a=squares_bottom+18,x	// 7
+			sl4
+			PF1=a=squares_bottom+24,x	// 7
+			sl4
+			PF2=a=squares_bottom+30,x	// 7
+			y--
+		} !=
+		x--
+	} >=0
+	wsync PF0=PF1=PF2=y
+}
+
+
+/* Calc sine offset for present for a single letter
+ */
+func intro_calc_letter_sine {
+	a=numFrame a<< c- a+present_sine_offsets,y a&127 x=a
+	a=sliding_sine,x c+ a-8 a>> a>> a>> c- a+present_lo,y
+}
+
+
+/* Helper function for size optimization
+ */
+func intro_set_gfx_ptr_helper {
+	a=x=(intro_ptr),y
+	a=(intro_ptr2),y
+	y++
+}
+
+/* Set gfx pointers for ZP routine
+ */
+func intro_set_gfx_ptr {
+	intro_zp_routine+[INTRO_ZP_COUNT]=a
+	a=tmp a>> a>> a>> y=a
+
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR1+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR1+1]=a
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR2+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR2+1]=a
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR3+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR3+1]=a
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR4+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR4+1]=a
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR5+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR5+1]=a
+	intro_set_gfx_ptr_helper
+	intro_zp_routine+[INTRO_ZP_PTR6+0]=x
+	intro_zp_routine+[INTRO_ZP_PTR6+1]=a
+}
+
+
+/* Prepare display of logo
+ */
+func intro_prepare_logo {
+	// Timer for preparation phase
+	wsync TIM64T=a=23
+
+	// xpos
+	a=numFrame c- a+105 a&127 x=a a=sliding_sine,x	// +105 so sliding in looks better
+
+	// Set PF and position objects
+	tmp=a
+	a>> a>> a>> x=a
+	PF0=a=sliding_PF0,x PF1=a=sliding_PF1,x PF2=a=sliding_PF2,x
+
+	// p0
+	a=tmp a&0b11111000	// for player objects
+	x=0 intro_pos_object
+	// p1
+	a=tmp a&0b11111000 c- a+8	// for player objects
+	x++ intro_pos_object	
+	// m0
+	a=tmp c+ a-39 <{a+160}	// -39 covers no pixels; check for wrap
+	x++ intro_pos_object
+	// m1
+	a=tmp c- a+41	// +41 covers last 8 pixels
+	x++ intro_pos_object
+
+	wsync hmove
+	
+	VDELP0=VDELP1=a=[VDEL_ENABLE]
+	NUSIZ0=NUSIZ1=a=[THREE_COPIES_CLOSE | MSL_SIZE_8]
+	ENAM0=ENAM1=a=[OBJ_ENABLE]
+	
+	// Prepare ZP vars
+	a=demoState
+	a?[STATE_INTRO_CLUSTER_IN] ==goto .clusterIn
+	a?[STATE_INTRO_CLUSTER_OUT] ==goto .clusterOut
+	a?[STATE_INTRO_DMA_IN] ==goto .dmaIn
+	a?[STATE_INTRO_DMA_OUT] ==goto .dmaOut
+	a?[STATE_INTRO_PRESENT_IN] =={goto .presentIn}
+	a?[STATE_INTRO_PRESENT_OUT] =={goto .presentOut}
+	goto .endPrepare
+	
+.clusterIn:
+	a=numFrame
+	goto .clusterRest
+.clusterOut:
+	a=intro_durations+[STATE_INTRO_CLUSTER_OUT] c+ a-numFrame
+	a-50 <{a=0}	// for pause after slide-out
+.clusterRest:
+	a?14 >={a=14} a<< a<<
+	intro_ptr=x=&<cluster_lo intro_ptr+1=x=&>cluster_lo
+	intro_ptr2=x=&<cluster_hi intro_ptr2+1=x=&>cluster_hi
+	intro_set_gfx_ptr
+	intro_zp_routine+[INTRO_ZP_COLPTR+3]=a=0x00
+	intro_zp_routine+[INTRO_ZP_COLPTR]=a=&<cluster_gradient+5
+	intro_zp_routine+[INTRO_ZP_COLPTR+1]=a=&>cluster_gradient+5
+	goto .restoreGradient
+
+.dmaIn:
+	a=numFrame
+	goto .dmaRest
+.dmaOut:
+	a=intro_durations+[STATE_INTRO_DMA_OUT] c+ a-numFrame
+	a-50 <{a=0}	// for pause after slide-out
+.dmaRest:
+	a?16 >={a=16} a<< a<<
+	intro_ptr=x=&<dma_lo intro_ptr+1=x=&>dma_lo
+	intro_ptr2=x=&<dma_hi intro_ptr2+1=x=&>dma_hi
+	intro_set_gfx_ptr
+	// Possible candidates e0, e6
+	intro_zp_routine+[INTRO_ZP_COLPTR+3]=a=0xe6 //0x10
+	intro_zp_routine+[INTRO_ZP_COLPTR]=a=&<cluster_gradient
+	intro_zp_routine+[INTRO_ZP_COLPTR+1]=a=&>cluster_gradient
+
+.restoreGradient:
+	// Restore gradient fetch: lda xxxx,y; sta COLUP
+	intro_zp_routine+[INTRO_ZP_COLPTR-1]=a=0xb9	// lda xxxx,y
+	goto .endPrepare
+
+.presentIn:
+	a=numFrame
+	goto .presentRest
+.presentOut:
+	a=intro_durations+[STATE_INTRO_PRESENT_OUT] c+ a-numFrame
+	a-50 <{a=0}	// for pause after fade out
+.presentRest:
+	a>> a>> a>> a?7 >={a=7}		// 7+1 fade stages
+	c- a+&<present_gradient intro_zp_routine+[INTRO_ZP_COLPTR+0]=a
+	// Set gradient fetch to lda xxxx instead, with [xxxx] = color
+	intro_zp_routine+[INTRO_ZP_COLPTR-1]=a=0xad	// lda xxxx
+	intro_zp_routine+[INTRO_ZP_COLPTR+1]=a=&>present_gradient
+	intro_zp_routine+[INTRO_ZP_COLPTR+3]=a=0x00
+
+	// calc letter sines while setting addresses
+	intro_zp_routine+[INTRO_ZP_COUNT]=a=31
+	a=tmp c+ a>> a>> a>> y=a 
+	
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR1+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR1+1]=a=present_hi,y
+	y++
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR2+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR2+1]=a=present_hi,y
+	y++
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR3+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR3+1]=a=present_hi,y
+	y++
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR4+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR4+1]=a=present_hi,y
+	y++
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR5+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR5+1]=a=present_hi,y
+	y++
+	intro_calc_letter_sine intro_zp_routine+[INTRO_ZP_PTR6+0]=a
+	intro_zp_routine+[INTRO_ZP_PTR6+1]=a=present_hi,y
+
+
+.endPrepare:
+	// calc jmp offset
+	a=tmp a&0b11111000 tmp=a
+	a=111 c+ a-tmp
+	x=255 nocross {
+		x++ a-3
+	}>=
+	tmp=x
+
+	timwait
+}
+
+
+/* Display logo
+ */
+func intro_display_logo {
+	// Timer for display phase
+	wsync TIM64T=a=109
+	
+	// Set jmp offset
+	intro_ptr+1=a=&>intro_nopSlide
+	a=tmp c- a+&<intro_nopSlide intro_ptr=a
+	
+	// Waste lines according to logo height
+	a=demoState
+	a?[STATE_INTRO_CLUSTER_IN] ==goto .cluster
+	a?[STATE_INTRO_CLUSTER_OUT] ==goto .cluster
+	a?[STATE_INTRO_PRESENT_IN] ==goto .present
+	a?[STATE_INTRO_PRESENT_OUT] ==goto .present
+	goto .dma
+
+.cluster:
+	x=4 intro_waste_lines goto .display
+.present:
+	x=16 intro_waste_lines
+.dma:
+
+.display:
+	// Display logo
+	wsync intro_sl12 intro_sl12 intro_sl12 goto (intro_ptr)
+
+	// NOP slide for positioning
+	nocross {
+intro_nopSlide:
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc9
+		a?0xc5
+		*2
+		call intro_zp_routine
+	}
+
+	//VDELP0=VDELP1=a=[VDEL_DISABLE]
+	GRP0=GRP1=GRP0=ENAM0=ENAM1=PF0=PF1=PF2=a=0
+	
+	timwait wsync
+}
+
+
+/* Display middle part, i.e. logos
+ */
+func intro_middle {
+
+	// Multiplex state
+	a=demoState
+	a?[STATE_INTRO_CLUSTER_IN] <{goto .blank}
+	a?[STATE_INTRO_PRESENT_OUT+1] >={goto .blank}
+
+.logo:
+	// Display logo
+	intro_prepare_logo
+	intro_display_logo	
+	goto .end
+	
+	// Display blank middle
+.blank:
+	wsync TIM64T=a=132 timwait wsync
+.end:
+}
+
+
+/* Check for and do transitions
+ */
+func intro_transitions {
+	a=demoState
+	a?[STATE_INTRO_TRANS_IN] ==goto .in
+	a?[STATE_INTRO_TRANS_OUT] !=goto .noTrans
+
+	// Trans out
+	a=numFrame a?40 >={a=39}
+	a^0xff c+ a+39
+	goto .copyCols
+	
+.in:
+	// Trans in
+	a=numFrame a?40 >={a=39}
+.copyCols:
+	a>> c- a+5 x=a
+	y=5 {
+		intro_top_colors,y=a=intro_frame_fade,x
+		x--
+		y--
+	}>=0
+	x=5 y=0 {
+		intro_bottom_colors,y=a=intro_top_colors,x
+		y++ x--
+	}>=0
+	
+.noTrans:
+}
+
+
+/* Entry point
+ */
+func intro_main {
+	s=x=0xff
+
+	// Init
+	demoState=a=0 numFrame=a
+
+
+	// Kernel
+	{
+		/**************************************************
+		 * Overscan
+		 **************************************************/
+		
+		overscan_start
+		
+		// Script
+		numFrame++
+		x=demoState a=intro_durations,x !={
+			a?numFrame =={
+				numFrame=a=0 demoState++
+				a=demoState a?[STATE_INTRO_END] =={far title_main}
+			}
+		}
+
+		intro_transitions
+
+		overscan_end
+
+		/**************************************************
+		 * VBlank
+		 **************************************************/
+		
+		vblank_start
+		
+		far music
+		
+		vblank_end
+		
+		/**************************************************
+		 * Visible screen
+		 **************************************************/
+
+		TIM64T=a=56
+		intro_top_frame
+		timwait
+		
+		intro_middle
+
+		TIM64T=a=69
+		intro_bottom_frame
+		timwait
+
+	} always
+}

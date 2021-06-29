@@ -1,0 +1,8 @@
+/* Fetch ptr to data for frame x into tmp/tmp2.
+ * Return size of frame in y.
+ */
+func cube_fetch_ptr {
+	tmp=a=cube_frames_lo,x
+	tmp+1=a=cube_frames_hi,x
+	y=cube_sizes,x
+}

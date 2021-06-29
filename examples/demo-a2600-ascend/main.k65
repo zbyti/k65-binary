@@ -1,0 +1,71 @@
+/*
+ * TODO:
+ * - Examine max stack usage
+ * OPTIMIZE:
+ * - RAM: re-order vars so that tmp/tmp2 are at end (volatile!)
+ * 
+ * - Free RAM for music:
+ * - Permanent: 0xee to 0xf7 inclusive (10 bytes)
+ */
+
+ /* 48 Pixel kernel routine, to be copied into RAM.
+ */
+func intro_48pix_rom {
+	
+Intro_RAM_Start:
+	{
+	Intro_ZP_count:
+		y=42							// 2
+		
+		GRP0=a=cluster_10,y				// 7
+		GRP1=a=cluster_11,y				// 7
+		GRP0=a=cluster_12,y				// 7
+
+		intro_zp_routine+[INTRO_ZP_TMP]=a=cluster_16,y
+										// 7
+		a=x=cluster_15,y				// 4
+
+		a=cluster_gradient,y			// 4
+		a^0x1f COLUPF=a					// 5
+		a=cluster_14,y					// 4
+
+	Intro_ZP_tmp:
+		y=23							// 2
+		GRP1=a GRP0=x GRP1=y GRP0=a		// 12
+		COLUPF=a=0x00					// 5
+		
+		sl2								// 2
+		intro_zp_routine+[INTRO_ZP_COUNT]--
+										// 5
+	}>=0								// 3
+Intro_RAM_End:
+
+}
+
+
+main {
+	/**************************************************
+	 * Init
+	 **************************************************/	
+
+	init
+
+	/**************************************************
+	 * Start demo
+	 **************************************************/
+
+	// Copy zeropage routine
+	a=&<Intro_RAM_End c+ a-&<Intro_RAM_Start x=a {
+		intro_zp_routine,x=a=intro_48pix_rom,x
+		x-- x?255
+	}!=
+	
+	far intro_main
+	//far title_main
+	//far box_main
+	//far lines_main
+	//far greetings_main
+	//far cube_main
+	//far fw_main
+		
+}

@@ -1,0 +1,18 @@
+data cube_frames_hi {
+	&>cube_frame_0 &>cube_frame_1 &>cube_frame_2 &>cube_frame_3 
+	&>cube_frame_4 &>cube_frame_5 &>cube_frame_6 &>cube_frame_7 
+	&>cube_frame_8 &>cube_frame_9 &>cube_frame_10 &>cube_frame_11 
+	&>cube_frame_12 &>cube_frame_13 &>cube_frame_14 &>cube_frame_15 
+	&>cube_frame_16 &>cube_frame_17 &>cube_frame_18 &>cube_frame_19 
+	&>cube_frame_20 &>cube_frame_21 &>cube_frame_22 &>cube_frame_23 
+	&>cube_frame_24 &>cube_frame_25 &>cube_frame_26 &>cube_frame_27 
+	&>cube_frame_28 &>cube_frame_29 &>cube_frame_30 &>cube_frame_31 
+	&>cube_frame_32 &>cube_frame_33 &>cube_frame_34 &>cube_frame_35 
+	&>cube_frame_36 &>cube_frame_37 &>cube_frame_38 &>cube_frame_39 
+	&>cube_frame_40 &>cube_frame_41 &>cube_frame_42 &>cube_frame_43 
+	&>cube_frame_44 &>cube_frame_45 &>cube_frame_46 &>cube_frame_47 
+	&>cube_frame_48 &>cube_frame_49 &>cube_frame_50 &>cube_frame_51 
+	&>cube_frame_52 &>cube_frame_53 &>cube_frame_54 &>cube_frame_55 
+	&>cube_frame_56 &>cube_frame_57 &>cube_frame_58 &>cube_frame_59 
+	&>cube_frame_60 &>cube_frame_61 &>cube_frame_62 &>cube_frame_63 
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Scripts">
+      <UniqueIdentifier>{6A1599D1-A693-488B-AC31-47224C1A5D0E}</UniqueIdentifier>
+      <Extensions>bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{D4647A98-25BF-4E24-AE1E-056ED09B31A8}</UniqueIdentifier>
+      <Extensions>k65</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="!run.bat">
+      <Filter>Scripts</Filter>
+    </None>
+    <None Include="_defs.k65">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="files.lst" />
+    <None Include="main.k65">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

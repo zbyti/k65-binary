@@ -1,0 +1,79 @@
+/*
+*	Tutorial 02 - using data
+*
+*
+*/
+
+// RAM variables
+var anim = 0x80;
+var tmp  = 0x81;
+
+
+// "data" - declare byte data block
+data raster_data {
+	0
+	0xD0 0xD2 0xD4 0xD6 0xD8 0xDA 0xDC
+	0xDE 0xDC 0xDA 0xD8 0xD6 0xD4 0xD2 0xD0
+}
+
+data sine_table {
+	align 256	// this guarantees block starts on address divisible by 256
+	
+	// this generates precomputed sine table from the formula
+	for x=0..255 eval [ (sin(x/128*pi*2)*.499+.499)*178+1 ]
+}
+
+
+
+// "inline" - this code is inlined when it's called
+inline raster_bar {
+	x=15
+	{
+		wsync
+		a=raster_data,x
+		cbg=a
+		x--
+	}!=
+	cbg=a=0
+}
+
+
+
+// entry point block is declared with "main"
+main {
+	init
+	{
+		sync1
+		sync2
+		sync3
+
+		// draw top bar
+		raster_bar
+
+		// tmp - count total empty lines
+		tmp=a=180
+
+		// read sine table and wait as much scanlines
+		x=anim
+		y=sine_table,x
+		{
+			wsync
+			tmp--
+			y--
+		}!=
+
+		// draw animated bar
+		raster_bar
+
+		// wait remaining lines
+		{
+			wsync
+			tmp--
+		}!=
+
+		// draw bottom bar
+		raster_bar
+
+		anim++
+	} always	// loop forever
+}

@@ -1,0 +1,66 @@
+|acos( ''x'' )
+|Arcus cosinus
+|-
+|addbyte( ''sec'', ''b'' )
+|Add byte ''b'' to section ''sec''
+|-
+|asin( ''x'' )
+|Arcus sinus
+|-
+|ceil( ''x'' )
+|Round up to nearest integer
+|-
+|clamp( ''x'', ''min'', ''max'' )
+|Clamp ''x'' to range ''min'' to ''max''
+|-
+|color( ''r'', ''g'', ''b'' )
+|Return palette index for nearest color to color (''r'',''g'',''b'')
+|-
+|color( ''x'' )
+|Return  palette index for nearest color specified in format ''0xRRGGBB''
+|-
+|cos( ''x'' )
+|Cosinus
+|-
+|error( ''err'' )
+|Print error message ''err'' ane terminate compilation
+|-
+|floor( ''x'' )
+|Round down to nearest integer
+|-
+|frac( ''x'' )
+|Get fractional part ( ''x-floor(x)'' )
+|-
+|index( ''tab'', ''x'' )
+|1-dimensional indexing operator ( same as ''tab''[''x''] )
+|-
+|index( ''tab'', ''x'', ''y'' )
+|2-dimensional indexing operator ( same as ''tab''[''x'',''y''] )
+|-
+|max( ''a'', ''b'' )
+|Maximum
+|-
+|min( ''a'', ''b'' )
+|Minimum
+|-
+|pow( ''x'', ''y'' )
+|Power function
+|-
+|print( ''msg'' )
+|Print message ''msg''
+|-
+|rnd( )
+|Random value ''0 <= x < 1''
+|-
+|round( ''x'' )
+|Round to nearest integer
+|-
+|sin( ''x'' )
+|Sinus
+|-
+|size( ''sec'' )
+|Current size of section ''sec''
+|-
+|sqrt( ''x'' )
+|Square root
+|-
