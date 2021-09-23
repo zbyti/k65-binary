@@ -1,7 +1,7 @@
 
-output_file_name <- "program.prg"
-low_addr <- 0x2000
-high_addr <- 0x7FFF
+output_file_name <- "data.bin"
+low_addr <- 0x0000
+high_addr <- 0xFFFF
 
 
 function opt_lowaddr(cmd)
@@ -42,7 +42,7 @@ function link_create_bank(name)
 	local bnum = bank_count();
 
 	if( bnum>0 )
-		error("Plus 4 supports only single bank");
+		error("Atari XL supports only single bank");
 
 	bank_create( name, 1, low_addr, high_addr, 0 );
 }
@@ -66,15 +66,9 @@ function link_write_binary(path)
 {
 	bin_fopen_wb(path);
 
-	local nbanks = bank_count();
-
-	if( nbanks!=1 )
-		error("Plus 4 supports only single bank");
-
 	local bstart = bank_get_start(0);
 	local bsize = bank_get_last_used_byte(0)+1 - bstart;
 
-	bin_write_word(bstart);
 	bin_emit(0,bstart,bsize);
 	bin_fclose();
 }
