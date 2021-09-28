@@ -16,7 +16,13 @@ function opt_hiaddr(opt)
 
 OPTIONS.hiaddr <- opt_hiaddr
 
-
+// option: -keep
+keep_section_names  <- [];
+function opt_keep(cmd)
+{
+	keep_section_names.push(parse_string());
+}
+OPTIONS.keep <- opt_keep
 
 //compile(@"");
 
@@ -51,6 +57,16 @@ function link_make_sections()
 	sec_asm(as,"    JMP		main");
 	sec_set_referenced(as,1)
 	sec_init(as)
+
+	// -keep sections
+	foreach( name in keep_section_names )
+	{
+		local as = sec_find(name);
+		if( !as )
+			error("Missing section '"+name+"' specified as -keep paramater");
+
+		sec_set_referenced(as, 1);
+	}
 }
 
 // write final binary to file

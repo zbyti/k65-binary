@@ -1,8 +1,9 @@
 
+
 output_file_name <- "program.xex"
 low_addr <- 0x4000
 high_addr <- 0x6FFF
-
+intro_mode <- 0
 
 function opt_lowaddr(cmd)
 {
@@ -24,7 +25,6 @@ function opt_hiaddr(opt)
 		error("Address outside 0x0000..0xFFFF range")
 	high_addr = addr;
 }
-
 OPTIONS.hiaddr <- opt_hiaddr
 
 function no_system(cmd)
@@ -32,6 +32,11 @@ function no_system(cmd)
 }
 OPTIONS.noos <- no_system
 
+function set_intro_mode(cmd)
+{
+	intro_mode = 1; 
+}
+OPTIONS.intro <- set_intro_mode
 
 
 
@@ -51,14 +56,23 @@ function link_create_bank(name)
 function link_make_sections()
 {
 	// generate start
-	as <- sec_create()
-	sec_set_name(as,"__start")
-	sec_set_type(as,"system")
-	sec_set_fixaddr(as,low_addr)
-	sec_add_bank(as,"main")
-	sec_asm(as,"    JMP		main");
-	sec_set_referenced(as,1)
-	sec_init(as)
+	if( intro_mode )
+	{
+		as <- sec_entrypoint()
+		sec_set_fixaddr(as,low_addr)
+		sec_set_referenced(as,1)
+	}
+	else
+	{
+		as <- sec_create()
+		sec_set_name(as,"__start")
+		sec_set_type(as,"system")
+		sec_set_fixaddr(as,low_addr)
+		sec_add_bank(as,"main")
+		sec_asm(as,"    JMP		main");
+		sec_set_referenced(as,1)
+		sec_init(as)
+	}
 }
 
 // write final binary to file
@@ -79,9 +93,12 @@ function link_write_binary(path)
 	bin_write_word(bstart+bsize-1);
 	bin_emit(0,bstart,bsize);
 
-	bin_write_word(0x02E0);
-	bin_write_word(0x02E2);
-	bin_write_word(low_addr);
+	if( !intro_mode )
+	{
+		bin_write_word(0x02E0);
+		bin_write_word(0x02E1);
+		bin_write_word(low_addr);
+	}
 
 	bin_fclose();
 }
