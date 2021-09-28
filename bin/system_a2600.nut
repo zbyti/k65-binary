@@ -93,15 +93,45 @@ BANK_SEL <- [
 ];
 
 
+
+// option: -superchip
+function opt_superchip(cmd)
+{
+	SUPERCHIP = 1
+
+	compile(@"
+		var SCRamWrite = 0x1000;
+		var SCRamRead  = 0x1080;
+	");
+
+}
+OPTIONS.superchip <- opt_superchip
+SUPERCHIP <- 0
+
+
+// option: -keep
+keep_section_names  <- [];
+function opt_keep(cmd)
+{
+	keep_section_names.push(parse_string());
+}
+OPTIONS.keep <- opt_keep
+
+
+far_jump_stubs <- []
+
+
+
 // creates a bank with default parameters
 function link_create_bank(name)
 {
 	local bnum = bank_count();
+	local minaddr = SUPERCHIP ? 0xF100 : 0xF000;
 
 	if( bnum>=8 )
 		error("Bank count limit exceeded");
 
-	bank_create( name, 1<<bnum, 0xF000, 0xFFFF, 2 );
+	bank_create( name, 1<<bnum, minaddr, 0xFFFF, 3 );
 
 	label_add( "__banksel_"+name, BANK_SEL[bnum], 0 , 0 );
 }
@@ -143,6 +173,32 @@ function link_invoke_far_call( as_code, as_target_fn )
 	sec_asm( as_code, "    JSR     "+farname );
 }
 
+// called every time a far jump is made
+function link_invoke_far_jump( as_code, target_label )
+{
+	local name = sec_get_name(as_code);
+	local bfrom = sec_get_bank(as_code,0);
+	local stubname = "__farjmp_" + bfrom + "_" + target_label;
+	local found = false;
+
+	foreach(j in far_jump_stubs)
+		if(j.stub_name==stubname)
+		{
+			found = true;
+			break;
+		}
+
+	if(!found)
+		far_jump_stubs.push( {
+			stub_name = stubname,
+			src_name = name,
+			target_label = target_label
+		});
+
+	//print("Jump to: "+stubname);
+	sec_asm( as_code, "    JMP     "+stubname );
+}
+
 
 // executed in linker just after initializing all other sections
 function link_make_sections()
@@ -150,8 +206,11 @@ function link_make_sections()
 	if( bank_count()<=0 )
 		error("No banks present")
 
+	if( SUPERCHIP )
+		print("SuperChip is ENABLED!");
+
 	// generate vector section
-	as <- sec_create()
+	local as = sec_create()
 	sec_set_name(as,"__vectors")
 	sec_set_type(as,"system")
 	sec_set_fixaddr(as,0xFFF3)
@@ -171,16 +230,62 @@ function link_make_sections()
 	sec_init(as)
 
 	// generate entry stub
-	entry_bank <- sec_get_bank( sec_entrypoint(), 0 );
-	as <- sec_create()
+	local entry_bank = sec_get_bank( sec_entrypoint(), 0 );
+	as = sec_create()
 	sec_set_name(as,"__entry")
 	sec_set_type(as,"system")
+	sec_set_fixaddr(as,0xFFED)
 	sec_add_bank(as,"*")
 	sec_add_bank(as,bank_get_name(0))
 	sec_asm(as,"__entry")								// label
 	sec_asm(as,"    BIT     __banksel_"+entry_bank)		// switch bank
 	sec_asm(as,"    JMP     main")						// jump to main function
 	sec_init(as)
+
+
+	// generate far jumps trampolines
+	foreach( j in far_jump_stubs )
+	{
+		local as_src = sec_find(j.src_name);
+		if( sec_get_bank_count(as_src)!=1 )
+			error("Far jump can only be used in function resident in exactly one bank (jump "+j.src_name+"->"+j.target_label+")");
+
+		local as_dst = label_get_section(j.target_label);
+		if( !as_dst )
+			error("Target label can't be found in any section (jump "+j.src_name+"->"+j.target_label+")");
+
+		if( sec_get_bank_count(as_dst)!=1 )
+			error("Far jump can only jump to a label resident in exactly one bank (jump "+j.src_name+"->"+j.target_label+")");
+
+
+		local bfrom = sec_get_bank(as_src,0);
+		local bto = sec_get_bank(as_dst,0);
+		local stubname = "__farjmp_" + bfrom + "_" + j.target_label;
+
+		//print("FarJmp: " + j.src_name + "(" + bfrom + ") -> " + j.target_label + "(" + bto + ")" );
+		//print("Stub: "+stubname);
+
+		local as = sec_create();
+		sec_set_name( as, stubname );
+		sec_set_type( as, "stub" );
+		sec_add_bank( as, bfrom );
+		sec_add_bank( as, bto );
+		sec_asm( as, stubname );							// label
+		sec_asm( as, "    BIT     __banksel_"+bto );		//	BIT		__banksel_to
+		sec_asm( as, "    JMP     "+j.target_label );		//	JMP		target
+		sec_init(as);
+	}
+
+
+	// -keep sections
+	foreach( name in keep_section_names )
+	{
+		local as = sec_find(name);
+		if( !as )
+			error("Missing section '"+name+"' specified as -keep paramater");
+		
+		sec_set_referenced(as, 1);
+	}
 }
 
 // write final binary to file
