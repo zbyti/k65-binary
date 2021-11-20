@@ -1,6 +1,0 @@
--system A2600
-
-_defs.k65			core
-main.k65			core
-
--o a2600-tutorial-01.bin

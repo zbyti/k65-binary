@@ -1,9 +1,0 @@
-// Create banks in correct order
-bank core;		data _foo0 { 0 }    // 1FF4
-bank rubber;	data _foo1 { 0 }    // 1FF5
-bank data_1;	data _foo2 { 0 }    // 1FF6
-bank data_2;	data _foo3 { 0 }    // 1FF7
-bank data_3;	data _foo4 { 0 }    // 1FF8
-bank data_4;	data _foo5 { 0 }    // 1FF9
-bank data_5;	data _foo6 { 0 }    // 1FFA
-bank music;		data _foo7 { 0 }    // 1FFB

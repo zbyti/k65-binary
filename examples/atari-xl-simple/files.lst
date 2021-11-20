@@ -1,9 +1,0 @@
--system AtariXL
--lowAddr 0x2000
-
-defs.k65		main
-rainbow.k65	main
-
--o rainbow.xex
-
--link
