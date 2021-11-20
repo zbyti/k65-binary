@@ -2,33 +2,6 @@ output_file_name <- "program.rom"
 low_addr <- 0x8000
 high_addr <- 0xBFFF
 
-function opt_lowaddr(cmd)
-{
-	if( !parse_isint() )
-		error("Address argument missing")
-	local addr = parse_int();
-	if( addr<low_addr || addr>=high_addr )
-		error("Address outside 0x8000..0xBFFF range")
-	low_addr = addr;
-}
-OPTIONS.lowaddr <- opt_lowaddr
-
-function opt_hiaddr(opt)
-{
-	if( !parse_isint() )
-		error("Address argument missing")
-	local addr = parse_int();
-	if( addr<low_addr || addr>=high_addr )
-		error("Address outside 0x8000..0xBFFF range")
-	high_addr = addr;
-}
-OPTIONS.hiaddr <- opt_hiaddr
-
-function no_system(cmd)
-{
-}
-OPTIONS.noos <- no_system
-
 // creates a bank with default parameters
 function link_create_bank(name)
 {
@@ -44,14 +17,9 @@ function link_create_bank(name)
 function link_make_sections()
 {
 	// generate start
-	as <- sec_create()
-	sec_set_name(as,"__start")
-	sec_set_type(as,"system")
+	as <- sec_entrypoint()
 	sec_set_fixaddr(as,low_addr)
-	sec_add_bank(as,"main")
-	sec_asm(as,"    JMP		main");
 	sec_set_referenced(as,1)
-	sec_init(as)
 }
 
 // write final binary to file
