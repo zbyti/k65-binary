@@ -19,7 +19,7 @@ function opt_hiaddr(opt)
 {
 	if( !parse_isint() )
 		error("Address argument missing")
-	local addr = parse_int(1);
+	local addr = parse_int();
 	if( addr<0 || addr>=0xFFFF )
 		error("Address outside 0x0000..0xFFFF range")
 	high_addr = addr;
