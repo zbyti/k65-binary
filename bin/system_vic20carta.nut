@@ -1,5 +1,5 @@
-output_file_name <- "program.rom"
-low_addr <- 0x8000
+output_file_name <- "program.crt"
+low_addr <- 0xA009
 high_addr <- 0xBFFF
 intro_mode <- 0
 
@@ -9,7 +9,7 @@ function link_create_bank(name)
 	local bnum = bank_count();
 
 	if( bnum>0 )
-		error("Atari XL supports only single bank");
+		error("VIC-20 supports only single bank");
 
 	bank_create( name, 1, low_addr, high_addr, 0 );
 }
@@ -51,15 +51,16 @@ function link_write_binary(path)
 	local nbanks = bank_count();
 
 	if( nbanks!=1 )
-		error("Atari XL supports only single bank");
+		error("VIC-20 supports only single bank");
 
 	local bstart = bank_get_start(0);
 
-	bin_emit(0,bstart,1024*16-8);
-	bin_write_word(0x0060);
 	bin_write_word(low_addr);
-	bin_write_word(0x0400);
-	bin_write_word(0xBFF8);
+  bin_write_word(low_addr);
+	bin_write_word(0x3041);
+	bin_write_word(0xC2C3);
+	bin_write_byte(0xCD);
+	bin_emit(0,bstart,1024*8-9);
 
 	bin_fclose();
 }
